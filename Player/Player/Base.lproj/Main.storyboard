@@ -13,7 +13,7 @@
         <!--View Controller-->
         <scene sceneID="6R5-Bb-DQ9">
             <objects>
-                <viewController id="ga3-jg-DUl" customClass="ViewController" customModule="dddd" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController id="ga3-jg-DUl" customClass="ViewController" customModule="Player" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="mHh-AB-njY">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -39,7 +39,7 @@
         <!--Main View Controller-->
         <scene sceneID="tne-QT-ifu">
             <objects>
-                <viewController id="BYZ-38-t0r" customClass="MainViewController" customModule="dddd" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController id="BYZ-38-t0r" customClass="MainViewController" customModule="Player" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -128,6 +128,7 @@
                     <navigationItem key="navigationItem" id="jCA-8F-FEd"/>
                     <connections>
                         <outlet property="currentTime" destination="9hr-7T-EMQ" id="tUK-Ab-2dp"/>
+                        <outlet property="play" destination="FgJ-Vb-lNL" id="QJ6-Pz-Qt1"/>
                         <outlet property="seekTime" destination="jkU-ML-O4N" id="7oP-ur-bHj"/>
                         <outlet property="totalTime" destination="hq4-mr-Zew" id="SfR-Oo-8qP"/>
                     </connections>

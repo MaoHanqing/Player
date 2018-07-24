@@ -10,24 +10,33 @@ import UIKit
 import AVFoundation
 class MainViewController: UIViewController {
 
+    @IBOutlet weak var play: UIButton!
     @IBOutlet weak var seekTime: UITextField!
     @IBOutlet weak var totalTime: UILabel!
     @IBOutlet weak var currentTime: UILabel!
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        
-        PlayManager.preparePlayer("http://sc1.111ttt.cn/2016/1/06/01/199012102390.mp3",periodicTime:{ (current, totoal) in
-            self.currentTime.text = "\(current)"
-            self.totalTime.text = "\(totoal)"
-        }) { (item) in
+        self.play.isEnabled = false
+        PlayManager.prepare("http://sc1.111ttt.cn/2016/1/06/01/199012102390.mp3", playerResult:{[weak self](player,result) in
             
-        }
+            switch result{
+            case .readyToPlay( _):
+                self?.play.isEnabled = true
+            case.failure(let error):
+                print(error)
+            case .finish():
+                self?.play.isSelected = false
+            case .playing(let current,let total):
+                self?.currentTime.text = "\(current)"
+                self?.totalTime.text = "\(total)"
+            }
+        })
         
     }
       override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        PlayManager.invalidatePlayer()
+        PlayManager.stop()
     }
     deinit{
        
@@ -39,7 +48,19 @@ class MainViewController: UIViewController {
     }
 
     @IBAction func play(_ sender: UIButton) {
-        
+        switch PlayManager.default.state {
+        case .pause:
+            PlayManager.play()
+             sender.isSelected = false
+        case .stop:
+            PlayManager.replay()
+            sender.isSelected = false
+        case .play:
+            PlayManager.pause()
+            sender.isSelected = true
+        default:
+            break
+        }
         sender.isSelected = !sender.isSelected
         if sender.isSelected {
             PlayManager.play()
@@ -56,15 +77,12 @@ class MainViewController: UIViewController {
     @IBAction func next(_ sender: UIButton) {
     }
     @IBAction func seek(_ sender: Any) {
-        PlayManager.seek(Double(self.seekTime.text ?? "30")!) { (complete) in
-               print(" == \(complete)")
-        }
+        PlayManager.seek(Double(self.seekTime.text ?? "30")!)
     }
     @IBAction func seekTo(_ sender: Any) {
         
-        PlayManager.seek(to: CMTime(seconds: (Double(self.seekTime.text ?? "0")! ), preferredTimescale: 1)) { (complete) in
-            print("TO == \(complete)")
-        }
+        PlayManager.seek(to: CMTime(seconds: (Double(self.seekTime.text ?? "0")! ), preferredTimescale: 1))
+        
     }
     @IBAction func replay(_ sender: Any) {
         PlayManager.replay()

@@ -8,87 +8,212 @@
 
 import Foundation
 import AVFoundation
-typealias periodicTimeCallback = (Double,Double) -> Void
-typealias playerDidFinishedPlayCallback = (AVPlayerItem)->Void
+
+
+
+struct PlayerError{
+    enum PlayerErrorCode :Int {
+        case loadingFail =  400
+        case emptyURL = 401
+    }
+    static let PlayerErrorDomain = "playerDomain"
+    static func getNetworkLoadFailError() -> Error {
+        return self.setError(info: "loading fail,server error", errorCode: PlayerErrorCode.loadingFail)
+    }
+    static func getEmptyURLError()->Error{
+        return self.setError(info: "url is empty", errorCode: PlayerErrorCode.emptyURL)
+    }
+    static func setError(info:String,errorCode:PlayerErrorCode) ->Error{
+        let errorInfo = ["errMsg": info]
+        let error = NSError(domain: PlayerErrorDomain, code: errorCode.rawValue, userInfo: errorInfo)
+        return error as Error
+    }
+}
+
+public enum PlayerResult {
+    case failure(Error)
+    case readyToPlay()
+    case finish()
+    case playing(Double,Double)
+}
+
+public enum PlayerState{
+    case readyToPlay
+    case stop
+    case play
+    case pause
+    case wait
+    case error
+    case buffering
+    case unkonw
+    case replay
+}
+
 class PlayManager :NSObject{
+    
    static var `default` = PlayManager()
     
-   var periodicTime:periodicTimeCallback?
-   var playerDidFinishedPlay:playerDidFinishedPlayCallback?
-    private var timeOberver : Any?
-    private var playItemURL :String?{
+   private var playerResult:playerResultCallBack?
+   private var timeObserver : Any?
+   private var playItemURL :String?{
         didSet{
-            if let url = playItemURL {
-                self.play(with: url)
-            }
+            self.state = .wait
+            self.play(with: playItemURL, result: self.playerResult)
         }
     }
-   lazy var player : AVPlayer = {
-        let player = AVPlayer()
-    return player
-    }()
-   
-    static func preparePlayer(_ url:String, periodicTime:periodicTimeCallback? = nil,playerDidFinishedPlay:playerDidFinishedPlayCallback? = nil){
+   var state  = PlayerState.unkonw
+   var player : AVPlayer?
+   var duration = 0.0
+    static func prepare(_ url:String,playerResult:playerResultCallBack? = nil){
+        self.default.playerResult = playerResult
         self.default.playItemURL = url
-        self.default.addPeriodicTimeObserver()
-        self.default.periodicTime = periodicTime
-        self.default.playerDidFinishedPlay = playerDidFinishedPlay
-        NotificationCenter.default.addObserver(self.default, selector: #selector(self.default.playbackDidFinish), name: Notification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
-    }
-    static func invalidatePlayer(){
-        self.default.player.pause()
-        if let timeOberver = self.default.timeOberver  {
-            self.default.player.removeTimeObserver(timeOberver)
-        }
-        NotificationCenter.default.removeObserver(self.default)
-        self.default.invalidatePlayerItme()
     }
     static func play() {
-        self.default.player.play()
+        switch self.default.state {
+        case .pause,.readyToPlay,.replay:
+            self.default.player?.play()
+            self.default.state = .play
+        default:
+            break
+        }
     }
     
     static func pause()  {
-        self.default.player.pause()
-    }
-    static func seek(_ sec:Double,completion:@escaping ((Bool)->Void)){
-       let finalTime = CMTimeAdd(self.default.player.currentTime(), CMTime(seconds: sec, preferredTimescale: 1))
-        self.default.player.seek(to: finalTime,completionHandler: completion)
-    }
-    static func seek(to time:CMTime,completion:@escaping ((Bool)->Void)){
-        self.default.player.seek(to: time,completionHandler: completion)
+        self.default.player?.pause()
+        self.default.state = .pause
     }
     static func replay(){
-        self.default.play(with: self.default.playItemURL!)
+        self.default.state = .replay
+        self.default.play(with: self.default.playItemURL!,immediatelyPlay: true, result: self.default.playerResult)
     }
+    static func stop(){
+        if self.default.state == .stop{
+            return
+        }
+        self.default.state = .stop
+        self.default.removeObserver()
+        self.default.player = nil
+    }
+    static func seek(_ sec:Double,completion:(()->Void)? = nil){
+        guard let player = self.default.player else {
+            return
+        }
+        let finalTime = CMTimeAdd((player.currentTime()), CMTime(seconds: sec, preferredTimescale: 1))
+        player.seek(to: finalTime,completionHandler: { (result) in
+            if result{
+                completion?()
+            }
+            
+        })
+    }
+    static func seek(to time:CMTime,completion:(()->Void)? = nil){
+        self.default.player?.seek(to: time,completionHandler:{ (result) in
+            if result{
+                completion?()
+            }
+            
+        })
+    }
+   
 }
+
 extension PlayManager{
-    func play(with url:String){
-        let playerItem = AVPlayerItem(url: URL(string: url)!)
-        self.player.replaceCurrentItem(with: playerItem)
-        playerItem.addObserver(self, forKeyPath: "status", options: .new, context: nil)
+    
+   typealias playerResultCallBack = (AVPlayer?,PlayerResult) -> (Void)
+    
+   private func play(with url:String?,immediatelyPlay:Bool = false,result:playerResultCallBack?){
+        guard let url = url else {
+        
+            invokeResultCallBack(result,.failure(PlayerError.getEmptyURLError()))
+          
+            self.state = .error
+            return
+        }
+        if self.player == nil{
+            self.player = AVPlayer()
+        }
+        DownloadManager.default.downloadResource(resourcePath: url,downloadCacheType: .audio) { [weak self] (downloadReuslt) -> (Void) in
+            switch downloadReuslt{
+            case.success(let url):
+                let playerItem = AVPlayerItem(url: url)
+                self?.player?.replaceCurrentItem(with: playerItem)
+                self?.addObserver()
+                if immediatelyPlay{
+                    PlayManager.play()
+                }
+            case .failure(_):
+                self?.invokeResultCallBack(result,.failure(PlayerError.getEmptyURLError()))
+            
+                self?.state = .error
+            case .failureUrl( _):
+                self?.invokeResultCallBack(result,.failure(PlayerError.getNetworkLoadFailError()))
+                self?.state = .error
+            }
+        }
+     
     }
-    func invalidatePlayerItme(){
-           self.player.currentItem?.removeObserver(self, forKeyPath: "status")
+    func invokeResultCallBack(_ callBack:playerResultCallBack?,_ result:PlayerResult){
+        callBack?(self.player,result)
+    }
+   private func addObserver(){
+        //播放完成
+        NotificationCenter.default.addObserver(self, selector: #selector(self.playbackDidFinish), name: Notification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
+        //打断处理
+        NotificationCenter.default.addObserver(self, selector: #selector(self.audioSessionInterrupted), name: Notification.Name.AVAudioSessionInterruption, object: nil)
+        //播放进度
+            self.addPeriodicTimeObserver()
+        //playerItem
+           self.player?.currentItem?.addObserver(self, forKeyPath: "status", options: .new, context: nil)
+    }
+   private func removeObserver() {
+        NotificationCenter.default.removeObserver(self)
+        if let timeObserver = self.timeObserver{
+            self.player?.removeTimeObserver(timeObserver)
+            self.timeObserver = nil
+        }
+        guard  let item = self.player?.currentItem else {
+            return
+        }
+        item.removeObserver(self, forKeyPath: "status")
     }
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         if keyPath == "status" {
-            switch self.player.status{
+            switch self.player!.status{
             case .unknown:
-                print("未知状态")
+                self.state = .unkonw
             case .readyToPlay:
-                print("可以播放")
+                self.state = .readyToPlay
+                invokeResultCallBack(self.playerResult, .readyToPlay())
+                self.duration = CMTimeGetSeconds(self.player!.currentItem!.duration)
             case .failed:
-                print("加载失败 网络或者服务器出现问题")
+                self.state = .error
+                
+                invokeResultCallBack(self.playerResult, .failure(PlayerError.getNetworkLoadFailError()))
+          
             }
         }
     }
-    @objc func playbackDidFinish()  {
-        invalidatePlayerItme()
-        self.playerDidFinishedPlay?(self.player.currentItem!)
+    @objc private func playbackDidFinish()  {
+        invokeResultCallBack(self.playerResult, .finish())
+        PlayManager.stop()
         print("播放完成")
     }
-   
-    func addPeriodicTimeObserver() {
+    @objc private func audioSessionInterrupted(_ notification:Notification) {
+        guard let userInfo = notification.userInfo,
+            let interruptionTypeRawValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+            let interruptionType = AVAudioSessionInterruptionType(rawValue: interruptionTypeRawValue) else {
+                return
+        }
+        
+        switch interruptionType {
+        case .began:
+            PlayManager.pause()
+        case .ended:
+            PlayManager.play()
+        }
+            
+    }
+  private  func addPeriodicTimeObserver() {
         // Invoke callback every half second
         
         let interval = CMTime(seconds: 0.5,
@@ -97,18 +222,15 @@ extension PlayManager{
         
         let mainQueue = DispatchQueue.main
         // Add time observer
-        guard let currentItem = self.player.currentItem else {
+        guard let currentItem = self.player?.currentItem else {
             return
         }
-       self.timeOberver =  self.player.addPeriodicTimeObserver(forInterval: interval, queue: mainQueue) {
+       self.timeObserver =  self.player?.addPeriodicTimeObserver(forInterval: interval, queue: mainQueue) {
             [weak self] time in
             // update player transport UI
-            print("time === \(CMTimeGetSeconds(time))")
-            self?.periodicTime?(CMTimeGetSeconds(time),CMTimeGetSeconds(currentItem.duration))
+            print("time === \(CMTimeGetSeconds(time))\n======\(CMTimeGetSeconds(currentItem.duration))")
+        self?.invokeResultCallBack(self?.playerResult, .playing(CMTimeGetSeconds(time), (self?.duration)!))
         }
     }
 }
-extension AVPlayer{
-    
-    
-}
+
