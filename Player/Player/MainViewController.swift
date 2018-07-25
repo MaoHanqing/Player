@@ -37,9 +37,11 @@ class MainViewController: UIViewController {
                 print("======\n \(state) \n")
                 switch state{
                 case .play,.replay:
-                    self?.play.isSelected = true
+                    self?.setSelected(true)
+                case .readyToPlay,.wait:
+                    break
                 default:
-                    self?.play.isSelected = false
+                    self?.setSelected(false)
                 }
             default:
                 break
@@ -49,7 +51,12 @@ class MainViewController: UIViewController {
         })
        
     }
-    
+    func  setSelected(_ selected:Bool)  {
+        guard  selected != self.play.isSelected else {
+            return
+        }
+        self.play.isSelected = selected
+    }
       override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         PlayManager.stop()

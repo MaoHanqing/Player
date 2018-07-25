@@ -46,6 +46,7 @@ public enum PlayerState{
     case stop
     case play
     case pause
+    case finish
     case wait
     case error
     case buffering
@@ -84,6 +85,8 @@ class PlayManager :NSObject{
         case .pause,.readyToPlay,.replay:
             self.default.state = .play
             self.default.player?.play()
+        case .finish:
+            self.replay()
         default:
             break
         }
@@ -230,8 +233,11 @@ extension PlayManager{
         }
     }
     @objc private func playbackDidFinish()  {
-        invokeResultCallBack(.finish)
         PlayManager.stop()
+        self.state = .finish
+        invokeResultCallBack(.finish)
+        
+        
         print("播放完成")
     }
     @objc private func audioSessionInterrupted(_ notification:Notification) {
