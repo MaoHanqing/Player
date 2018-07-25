@@ -28,7 +28,6 @@ class MainViewController: UIViewController {
             case .playing(let current,let total):
                 self?.currentTime.text = "\(current)"
                 self?.totalTime.text = "\(total)"
-//                print("index === \(PlayManager.default.currentPlayItemIndex)")
             case .topOfPlayList:
                 print("已经是第一首了")
             case .trailOfPlayList:
@@ -81,7 +80,7 @@ class MainViewController: UIViewController {
         
     }
     @IBAction func pre(_ sender: UIButton) {
-        PlayManager.last()
+        PlayManager.previousTrack()
     }
     
     @IBAction func next(_ sender: UIButton) {
