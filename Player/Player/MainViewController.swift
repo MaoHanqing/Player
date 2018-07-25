@@ -18,22 +18,38 @@ class MainViewController: UIViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         self.play.isEnabled = false
-        PlayManager.prepare("http://sc1.111ttt.cn/2016/1/06/01/199012102390.mp3", playerResult:{[weak self](player,result) in
+        PlayManager.prepare(["http://sc1.111ttt.cn:8282/2017/1/11m/11/304112002347.m4a?#.mp3","http://sc1.111ttt.cn/2016/1/06/01/199012102390.mp3","http://sc1.111ttt.cn:8282/2017/1/05m/09/298092040183.m4a?#.mp3","http://sc1.111ttt.cn:8282/2018/1/03m/13/396131202421.m4a?#.mp3"], playerResult:{[weak self](player,result) in
             
             switch result{
-            case .readyToPlay( _):
+            case .readyToPlay:
                 self?.play.isEnabled = true
             case.failure(let error):
                 print(error)
-            case .finish():
-                self?.play.isSelected = false
             case .playing(let current,let total):
                 self?.currentTime.text = "\(current)"
                 self?.totalTime.text = "\(total)"
+//                print("index === \(PlayManager.default.currentPlayItemIndex)")
+            case .topOfPlayList:
+                print("已经是第一首了")
+            case .trailOfPlayList:
+                print("最后一首了")
+            case .playerStateChange(let state):
+                print("======\n \(state) \n")
+                switch state{
+                case .play,.replay:
+                    self?.play.isSelected = true
+                default:
+                    self?.play.isSelected = false
+                }
+            default:
+                break
             }
-        })
+          
         
+        })
+       
     }
+    
       override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         PlayManager.stop()
@@ -48,19 +64,6 @@ class MainViewController: UIViewController {
     }
 
     @IBAction func play(_ sender: UIButton) {
-        switch PlayManager.default.state {
-        case .pause:
-            PlayManager.play()
-             sender.isSelected = false
-        case .stop:
-            PlayManager.replay()
-            sender.isSelected = false
-        case .play:
-            PlayManager.pause()
-            sender.isSelected = true
-        default:
-            break
-        }
         sender.isSelected = !sender.isSelected
         if sender.isSelected {
             PlayManager.play()
@@ -71,10 +74,11 @@ class MainViewController: UIViewController {
         
     }
     @IBAction func pre(_ sender: UIButton) {
-        
+        PlayManager.last()
     }
     
     @IBAction func next(_ sender: UIButton) {
+        PlayManager.next()
     }
     @IBAction func seek(_ sender: Any) {
         PlayManager.seek(Double(self.seekTime.text ?? "30")!)
