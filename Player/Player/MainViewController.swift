@@ -20,7 +20,7 @@ class MainViewController: UIViewController {
         self.play.isEnabled = false
         SVProgressHUD.setDefaultStyle(.dark)
         SVProgressHUD.show()
-        
+        PlayManager.default.cyclePlay = true
         PlayManager.prepare([
             "http://sc1.111ttt.cn:8282/2017/1/11m/11/304112002347.m4a?#.mp3",
             "http://sc1.111ttt.cn/2016/1/06/01/199012102390.mp3",

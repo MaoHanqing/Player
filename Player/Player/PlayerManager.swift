@@ -60,7 +60,9 @@ class PlayManager :NSObject{
     
     var player : AVPlayer? // player
     var duration = 0.0 //currentItem duration
-    
+    var autoPlayNextSong = true
+    var periodicTime = 0.3
+    var cyclePlay = false
     //player state
     var state  = PlayerState.unkonw{
         didSet{
@@ -86,7 +88,11 @@ class PlayManager :NSObject{
         switch self.default.state {
         case .pause,.readyToPlay,.replay:
             self.default.state = .play
-            self.default.player?.play()
+            guard let player = self.default.player else{
+                self.default.play(with: self.default.playItemURL)
+                return
+            }
+            player.play()
         case .finish:
             self.replay()
         default:
@@ -105,20 +111,29 @@ class PlayManager :NSObject{
     }
     static func next(){
         let index = self.default.currentPlayItemIndex
-        guard index < self.default.playItemList.count - 1 else {
-            self.default.state = .trailOfPlayList
+        
+        if index < self.default.playItemList.count - 1{
+            self.replacePlay( self.default.playItemList[index + 1])
             return
         }
-        self.replacePlay( self.default.playItemList[index + 1])
+        
+        self.default.state = .trailOfPlayList
+        
+        if self.default.cyclePlay {
+            self.default.play(with: self.default.playItemList.first, immediatelyPlay: true)
+        }
     }
     
     static func previousTrack(){
         let index = self.default.currentPlayItemIndex
-        guard index > 0 else {
-            self.default.state = .topOfPlayList
+        if index > 0{
+        self.replacePlay(self.default.playItemList[index - 1])
             return
         }
-        self.replacePlay(self.default.playItemList[index - 1])
+        self.default.state = .topOfPlayList
+        if self.default.cyclePlay {
+            self.default.play(with: self.default.playItemList.last, immediatelyPlay: true)
+        }
     }
     
     static func replacePlay(_ url:String, immediatelyPlay:Bool = true){
@@ -247,6 +262,10 @@ extension PlayManager{
     @objc fileprivate func playbackDidFinish()  {
         PlayManager.stop()
         self.state = .finish
+        if self.autoPlayNextSong{
+            PlayManager.next()
+        }
+        
     }
     @objc fileprivate func audioSessionInterrupted(_ notification:Notification) {
         guard let userInfo = notification.userInfo,
@@ -266,7 +285,7 @@ extension PlayManager{
     fileprivate  func addPeriodicTimeObserver() {
         // Invoke callback every half second
         
-        let interval = CMTime(seconds: 0.5,
+        let interval = CMTime(seconds: self.periodicTime,
                               preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         // Queue on which to invoke the callback
         
