@@ -27,12 +27,8 @@ struct PlayerError{
 }
 
 public enum PlayerResult {
-    case pause
-    case finish
-    case readyToPlay
-    case topOfPlayList
+    case existNextSong(Bool)
     case failure(Error)
-    case trailOfPlayList
     case playing(Double,Double)
     case playerStateChange(PlayerState)
 }
@@ -48,6 +44,8 @@ public enum PlayerState{
     case finish
     case buffering
     case readyToPlay
+    case topOfPlayList
+    case trailOfPlayList
 }
 
 class PlayManager :NSObject{
@@ -100,7 +98,6 @@ class PlayManager :NSObject{
         //pause the item
         self.default.player?.pause()
         self.default.state = .pause
-        self.default.invokeResultCallBack(.pause)
     }
     static func replay(){
         self.default.state = .replay
@@ -109,7 +106,7 @@ class PlayManager :NSObject{
     static func next(){
         let index = self.default.currentPlayItemIndex
         guard index < self.default.playItemList.count - 1 else {
-            self.default.invokeResultCallBack(.trailOfPlayList)
+            self.default.state = .trailOfPlayList
             return
         }
         self.replacePlay( self.default.playItemList[index + 1])
@@ -118,7 +115,7 @@ class PlayManager :NSObject{
     static func previousTrack(){
         let index = self.default.currentPlayItemIndex
         guard index > 0 else {
-            self.default.invokeResultCallBack(.topOfPlayList)
+            self.default.state = .topOfPlayList
             return
         }
         self.replacePlay(self.default.playItemList[index - 1])
@@ -158,6 +155,9 @@ class PlayManager :NSObject{
             }
         })
     }
+    static  func cleanCache() {
+        DownloadCache.cleanDownloadFiles()
+    }
     
 }
 
@@ -168,16 +168,20 @@ extension PlayManager{
     fileprivate func play(with url:String?,immediatelyPlay:Bool = false){
         self.state = .wait
         self.playItemURL = url
-        guard let url = url else {
+        
+        guard let _url = url else {
             invokeResultCallBack(.failure(PlayerError.getEmptyURLError()))
             self.state = .error
             return
         }
         
+        let exist =  DownloadCache.isFileExist(atPath: DownloadCache.cachePath(url: URL(fileURLWithPath: _url)))
+        invokeResultCallBack(.existNextSong(exist))
+        
         if self.player == nil{
             self.player = AVPlayer()
         }
-        
+    
         DownloadManager.default.downloadResource(resourcePath: url,downloadCacheType: .audio) { [weak self] (downloadReuslt) -> (Void) in
             switch downloadReuslt{
             case.success(let url):
@@ -227,9 +231,9 @@ extension PlayManager{
             case .unknown:
                 self.state = .unkonw
             case .readyToPlay:
-                self.state = .readyToPlay
-                invokeResultCallBack(.readyToPlay)
                 self.duration = CMTimeGetSeconds(self.player!.currentItem!.duration)
+                
+                self.state = .readyToPlay
                 if self.immediatelyPlay{
                     PlayManager.play()
                 }
@@ -243,7 +247,6 @@ extension PlayManager{
     @objc fileprivate func playbackDidFinish()  {
         PlayManager.stop()
         self.state = .finish
-        invokeResultCallBack(.finish)
     }
     @objc fileprivate func audioSessionInterrupted(_ notification:Notification) {
         guard let userInfo = notification.userInfo,

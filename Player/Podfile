@@ -5,6 +5,7 @@ inhibit_all_warnings!
 
 target 'Player' do
   pod 'Alamofire', '~> 4.5.0'
+  pod 'SVProgressHUD'
 end
 
 
