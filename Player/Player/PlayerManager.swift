@@ -269,9 +269,6 @@ extension PlayManager{
         
         let mainQueue = DispatchQueue.main
         // Add time observer
-        guard let currentItem = self.player?.currentItem else {
-            return
-        }
         
         self.timeObserver =  self.player?.addPeriodicTimeObserver(forInterval: interval, queue: mainQueue) {
             [weak self] time in
