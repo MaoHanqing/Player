@@ -120,7 +120,7 @@ class PlayManager :NSObject{
         self.default.state = .trailOfPlayList
         
         if self.default.cyclePlay {
-            self.default.play(with: self.default.playItemList.first, immediatelyPlay: true)
+            self.replacePlay(self.default.playItemList.first, immediatelyPlay: true)
         }
     }
     
@@ -132,11 +132,11 @@ class PlayManager :NSObject{
         }
         self.default.state = .topOfPlayList
         if self.default.cyclePlay {
-            self.default.play(with: self.default.playItemList.last, immediatelyPlay: true)
+            self.replacePlay(self.default.playItemList.last, immediatelyPlay: true)
         }
     }
     
-    static func replacePlay(_ url:String, immediatelyPlay:Bool = true){
+    static func replacePlay(_ url:String?, immediatelyPlay:Bool = true){
         self.stop()
         self.default.play(with: url, immediatelyPlay: immediatelyPlay)
     }
