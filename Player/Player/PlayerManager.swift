@@ -4,22 +4,22 @@
 //  Copyright © 2018年 hanqing.mao. All rights reserved.
 //
 
-import Foundation
 import AVFoundation
+import Foundation
 
-struct PlayerError{
-    enum PlayerErrorCode :Int {
-        case loadingFail =  400
+struct PlayerError {
+    enum PlayerErrorCode: Int {
+        case loadingFail = 400
         case emptyURL = 401
     }
     static let PlayerErrorDomain = "playerDomain"
     static func getNetworkLoadFailError() -> Error {
         return self.setError(info: "loading fail,server error", errorCode: PlayerErrorCode.loadingFail)
     }
-    static func getEmptyURLError()->Error{
+    static func getEmptyURLError() -> Error {
         return self.setError(info: "url is empty", errorCode: PlayerErrorCode.emptyURL)
     }
-    static func setError(info:String,errorCode:PlayerErrorCode) ->Error{
+    static func setError(info: String, errorCode: PlayerErrorCode) -> Error {
         let errorInfo = ["errMsg": info]
         let error = NSError(domain: PlayerErrorDomain, code: errorCode.rawValue, userInfo: errorInfo)
         return error as Error
@@ -29,11 +29,11 @@ struct PlayerError{
 public enum PlayerResult {
     case existNextSong(Bool)
     case failure(Error)
-    case playing(Double,Double)
+    case playing(Double, Double)
     case playerStateChange(PlayerState)
 }
 
-public enum PlayerState{
+public enum PlayerState {
     case stop
     case play
     case wait
@@ -48,37 +48,36 @@ public enum PlayerState{
     case trailOfPlayList
 }
 
-class PlayManager :NSObject{
+class PlayManager: NSObject {
     
     static var `default` = PlayManager()
     fileprivate var playItemList = [String]()
-    fileprivate var playerResult:playerResultCallBack?
-    fileprivate var timeObserver : Any?
-    fileprivate var playItemURL :String?
+    fileprivate var playerResult: playerResultCallBack?
+    fileprivate var timeObserver: Any?
+    fileprivate var playItemURL: String?
     fileprivate var immediatelyPlay = false
     
-    
-    var player : AVPlayer? // player
+    var player: AVPlayer? // player
     var duration = 0.0 //currentItem duration
     var autoPlayNextSong = true
     var periodicTime = 0.3
     var cyclePlay = false
     //player state
-    var state  = PlayerState.unkonw{
-        didSet{
+    var state = PlayerState.unkonw {
+        didSet {
             invokeResultCallBack(.playerStateChange(state))
         }
     }
     
-    var currentPlayItemIndex :Int {
+    var currentPlayItemIndex: Int {
         return self.playItemList.index(of: self.playItemURL ?? "") ?? 0
     }
     
     //public func
-    static func prepare(_ url:String,playerResult:playerResultCallBack? = nil){
-        self.prepare([url],playerResult:playerResult)
+    static func prepare(_ url: String, playerResult: playerResultCallBack? = nil) {
+        self.prepare([url], playerResult: playerResult)
     }
-    static func prepare(_ urls:[String],playerResult:playerResultCallBack? = nil){
+    static func prepare(_ urls: [String], playerResult: playerResultCallBack? = nil) {
         self.default.playerResult = playerResult
         self.default.playItemList = urls
         self.default.play(with: urls.first)
@@ -86,9 +85,9 @@ class PlayManager :NSObject{
     static func play() {
         //play the item
         switch self.default.state {
-        case .pause,.readyToPlay,.replay:
+        case .pause, .readyToPlay, .replay:
             self.default.state = .play
-            guard let player = self.default.player else{
+            guard let player = self.default.player else {
                 self.default.play(with: self.default.playItemURL)
                 return
             }
@@ -100,19 +99,19 @@ class PlayManager :NSObject{
         }
     }
     
-    static func pause()  {
+    static func pause() {
         //pause the item
         self.default.player?.pause()
         self.default.state = .pause
     }
-    static func replay(){
+    static func replay() {
         self.default.state = .replay
-        self.default.play(with: self.default.playItemURL!,immediatelyPlay: true)
+        self.default.play(with: self.default.playItemURL!, immediatelyPlay: true)
     }
-    static func next(){
+    static func next() {
         let index = self.default.currentPlayItemIndex
         
-        if index < self.default.playItemList.count - 1{
+        if index < self.default.playItemList.count - 1 {
             self.replacePlay( self.default.playItemList[index + 1])
             return
         }
@@ -124,10 +123,10 @@ class PlayManager :NSObject{
         }
     }
     
-    static func previousTrack(){
+    static func previousTrack() {
         let index = self.default.currentPlayItemIndex
-        if index > 0{
-        self.replacePlay(self.default.playItemList[index - 1])
+        if index > 0 {
+            self.replacePlay(self.default.playItemList[index - 1])
             return
         }
         self.default.state = .topOfPlayList
@@ -136,12 +135,12 @@ class PlayManager :NSObject{
         }
     }
     
-    static func replacePlay(_ url:String?, immediatelyPlay:Bool = true){
+    static func replacePlay(_ url: String?, immediatelyPlay: Bool = true) {
         self.stop()
         self.default.play(with: url, immediatelyPlay: immediatelyPlay)
     }
-    static func stop(){
-        if self.default.state == .stop{
+    static func stop() {
+        if self.default.state == .stop {
             return
         }
         self.default.state = .stop
@@ -149,23 +148,23 @@ class PlayManager :NSObject{
         self.default.player = nil
     }
     
-    static func seek(_ sec:Double,completion:(()->Void)? = nil){
+    static func seek(_ sec: Double, completion:(() -> Void)? = nil) {
         // seek to the increase second of the current time
         guard let player = self.default.player else {
             return
         }
         let finalTime = CMTimeAdd((player.currentTime()), CMTime(seconds: sec, preferredTimescale: 1))
-        player.seek(to: finalTime,completionHandler: { (result) in
-            if result{
+        player.seek(to: finalTime, completionHandler: { (result) in
+            if result {
                 completion?()
             }
             
         })
     }
-    static func seek(to time:CMTime,completion:(()->Void)? = nil){
+    static func seek(to time: CMTime, completion:(() -> Void)? = nil) {
         // seek to the specific time
-        self.default.player?.seek(to: time,completionHandler:{ (result) in
-            if result{
+        self.default.player?.seek(to: time, completionHandler: { (result) in
+            if result {
                 completion?()
             }
         })
@@ -176,11 +175,11 @@ class PlayManager :NSObject{
     
 }
 
-extension PlayManager{
+extension PlayManager {
     
-    typealias playerResultCallBack = (AVPlayer?,PlayerResult) -> (Void)
+    typealias playerResultCallBack = (AVPlayer?, PlayerResult) -> Void
     
-    fileprivate func play(with url:String?,immediatelyPlay:Bool = false){
+    fileprivate func play(with url: String?, immediatelyPlay: Bool = false) {
         self.state = .wait
         self.playItemURL = url
         
@@ -190,15 +189,15 @@ extension PlayManager{
             return
         }
         
-        let exist =  DownloadCache.isFileExist(atPath: DownloadCache.cachePath(url: URL(fileURLWithPath: _url)))
+        let exist = DownloadCache.isFileExist(atPath: DownloadCache.cachePath(url: URL(fileURLWithPath: _url)))
         invokeResultCallBack(.existNextSong(exist))
         
-        if self.player == nil{
+        if self.player == nil {
             self.player = AVPlayer()
         }
-    
-        DownloadManager.default.downloadResource(resourcePath: url,downloadCacheType: .audio) { [weak self] (downloadReuslt) -> (Void) in
-            switch downloadReuslt{
+        
+        DownloadManager.default.downloadResource(resourcePath: url, downloadCacheType: .audio) { [weak self] (downloadReuslt) -> Void in
+            switch downloadReuslt {
             case.success(let url):
                 let playerItem = AVPlayerItem(url: url)
                 self?.player?.replaceCurrentItem(with: playerItem)
@@ -215,11 +214,11 @@ extension PlayManager{
         }
         
     }
-    func invokeResultCallBack(_ result:PlayerResult){
+    func invokeResultCallBack(_ result: PlayerResult) {
         
-        self.playerResult?(self.player,result)
+        self.playerResult?(self.player, result)
     }
-    fileprivate func addObserver(){
+    fileprivate func addObserver() {
         //播放完成
         NotificationCenter.default.addObserver(self, selector: #selector(self.playbackDidFinish), name: Notification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
         //打断处理
@@ -231,7 +230,7 @@ extension PlayManager{
     }
     fileprivate func removeObserver() {
         NotificationCenter.default.removeObserver(self)
-        if let timeObserver = self.timeObserver{
+        if let timeObserver = self.timeObserver {
             self.player?.removeTimeObserver(timeObserver)
             self.timeObserver = nil
         }
@@ -240,16 +239,16 @@ extension PlayManager{
         }
         item.removeObserver(self, forKeyPath: "status")
     }
-    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
         if keyPath == "status" {
-            switch self.player!.status{
+            switch self.player!.status {
             case .unknown:
                 self.state = .unkonw
             case .readyToPlay:
                 self.duration = CMTimeGetSeconds(self.player!.currentItem!.duration)
                 
                 self.state = .readyToPlay
-                if self.immediatelyPlay{
+                if self.immediatelyPlay {
                     PlayManager.play()
                 }
             case .failed:
@@ -259,15 +258,17 @@ extension PlayManager{
             }
         }
     }
-    @objc fileprivate func playbackDidFinish()  {
+    @objc
+    fileprivate func playbackDidFinish() {
         PlayManager.stop()
         self.state = .finish
-        if self.autoPlayNextSong{
+        if self.autoPlayNextSong {
             PlayManager.next()
         }
         
     }
-    @objc fileprivate func audioSessionInterrupted(_ notification:Notification) {
+    @objc
+    fileprivate func audioSessionInterrupted(_ notification: Notification) {
         guard let userInfo = notification.userInfo,
             let interruptionTypeRawValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
             let interruptionType = AVAudioSessionInterruptionType(rawValue: interruptionTypeRawValue) else {
@@ -292,11 +293,9 @@ extension PlayManager{
         let mainQueue = DispatchQueue.main
         // Add time observer
         
-        self.timeObserver =  self.player?.addPeriodicTimeObserver(forInterval: interval, queue: mainQueue) {
-            [weak self] time in
+        self.timeObserver = self.player?.addPeriodicTimeObserver(forInterval: interval, queue: mainQueue) { [weak self] time in
             // update player transport UI
             self?.invokeResultCallBack(.playing(CMTimeGetSeconds(time), (self?.duration)!))
         }
     }
 }
-
