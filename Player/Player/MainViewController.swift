@@ -42,9 +42,11 @@ class MainViewController: UIViewController {
                     self?.play.isEnabled = true
                     SVProgressHUD.dismiss()
                 case .topOfPlayList:
-                    print("已经是第一首了")
+                    self?.showToast("已经是第一首")
+                    SVProgressHUD.dismiss(withDelay: 1.5)
                 case .trailOfPlayList:
-                    print("最后一首了")
+                   self?.showToast("已经是最后一首")
+                    SVProgressHUD.dismiss(withDelay: 1.5)
                 case .wait:
                     self?.resetUI()
                 default:
@@ -64,8 +66,7 @@ class MainViewController: UIViewController {
         super.viewWillDisappear(animated)
         PlayManager.stop()
     }
-    deinit{
-       
+    deinit{ 
         print("player dismiss")
     }
     override func didReceiveMemoryWarning() {
@@ -74,6 +75,10 @@ class MainViewController: UIViewController {
     }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.view.endEditing(true)
+    }
+    func showToast(_ string:String){
+        SVProgressHUD.showInfo(withStatus:string)
+        SVProgressHUD.dismiss(withDelay: 1.5)
     }
     func resetUI(){
         self.currentTime.text = "0"
