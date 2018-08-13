@@ -46,16 +46,8 @@ class MainViewController: UIViewController {
                 }
             case .playItemIndex(let index):
                 self?.currentIndex.text = "\(index)"
-                if index == 0{
-                    self?.pre.isEnabled = false
-                    return
-                }else if index == urls.count - 1 {
-                    self?.nextItem.isEnabled = false
-                    return
-                }
-                self?.pre.isEnabled = true
-                self?.nextItem.isEnabled = true
-                    
+                self?.pre.isEnabled = index == 0 ? false :true
+                self?.nextItem.isEnabled = index == urls.count - 1 ?  false : true 
             case .playerStateChange(let state):
                 print("======\n \(state) \n")
                 switch state{
