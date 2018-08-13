@@ -104,6 +104,7 @@ class PlayManager: NSObject {
     
     static func pause() {
         //pause the item
+        self.default.immediatelyPlay = false
         self.default.player?.pause()
         self.default.state = .pause
     }
@@ -146,9 +147,10 @@ class PlayManager: NSObject {
         if self.default.state == .stop {
             return
         }
-        self.default.state = .stop
         self.default.removeObserver()
         self.default.player = nil
+        DownloadManager.cancelDownload(self.default.playItemURL ?? "")
+        self.default.state = .stop
     }
     
     static func seek(_ sec: Double, completion:(() -> Void)? = nil) {
@@ -199,7 +201,7 @@ extension PlayManager {
             self.player = AVPlayer()
         }
         
-        DownloadManager.default.downloadResource(resourcePath: url, downloadCacheType: .audio) { [weak self] (downloadReuslt) -> Void in
+        DownloadManager.default.downloadResource(resourcePath: url, cacheDirectoryName: "Audio") { [weak self] (downloadReuslt) -> Void in
             switch downloadReuslt {
             case.success(let url):
                 let playerItem = AVPlayerItem(url: url)
@@ -284,13 +286,15 @@ extension PlayManager {
         case .began:
             PlayManager.pause()
         case .ended:
-            PlayManager.play()
+            let option = userInfo[AVAudioSessionInterruptionOptionKey] as! Int
+            if option == AVAudioSessionInterruptionOptions.shouldResume.rawValue.hashValue{
+                PlayManager.play()
+            }
         }
         
     }
     fileprivate  func addPeriodicTimeObserver() {
         // Invoke callback every half second
-        
         let interval = CMTime(seconds: self.periodicTime,
                               preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         // Queue on which to invoke the callback
