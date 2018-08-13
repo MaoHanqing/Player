@@ -27,10 +27,11 @@ struct PlayerError {
 }
 
 public enum PlayerResult {
-    case existNextSong(Bool)
+    case playResourceExist(Bool)
     case failure(Error)
     case playing(Double, Double)
     case playerStateChange(PlayerState)
+    case playItemIndex(Int)
 }
 
 public enum PlayerState {
@@ -69,8 +70,10 @@ class PlayManager: NSObject {
         }
     }
     
-    var currentPlayItemIndex: Int {
-        return self.playItemList.index(of: self.playItemURL ?? "") ?? 0
+    var currentPlayItemIndex = 0  {
+        didSet{
+            invokeResultCallBack(.playItemIndex(currentPlayItemIndex))
+        }
     }
     
     //public func
@@ -182,15 +185,15 @@ extension PlayManager {
     fileprivate func play(with url: String?, immediatelyPlay: Bool = false) {
         self.state = .wait
         self.playItemURL = url
-        
+      
         guard let _url = url else {
             invokeResultCallBack(.failure(PlayerError.getEmptyURLError()))
             self.state = .error
             return
         }
-        
+        self.currentPlayItemIndex = self.playItemList.index(of: _url) ?? 0
         let exist = DownloadCache.isFileExist(atPath: DownloadCache.cachePath(url: URL(fileURLWithPath: _url)))
-        invokeResultCallBack(.existNextSong(exist))
+        invokeResultCallBack(.playResourceExist(exist))
         
         if self.player == nil {
             self.player = AVPlayer()
@@ -200,6 +203,7 @@ extension PlayManager {
             switch downloadReuslt {
             case.success(let url):
                 let playerItem = AVPlayerItem(url: url)
+                
                 self?.player?.replaceCurrentItem(with: playerItem)
                 self?.addObserver()
                 self?.immediatelyPlay = immediatelyPlay
@@ -219,6 +223,7 @@ extension PlayManager {
         self.playerResult?(self.player, result)
     }
     fileprivate func addObserver() {
+        
         //播放完成
         NotificationCenter.default.addObserver(self, selector: #selector(self.playbackDidFinish), name: Notification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
         //打断处理

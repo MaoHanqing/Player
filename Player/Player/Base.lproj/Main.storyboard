@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14113" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="uvL-Ra-oCa">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="13771" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="uvL-Ra-oCa">
     <device id="retina5_9" orientation="portrait">
         <adaptation id="fullscreen"/>
     </device>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14088"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="13772"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -124,6 +124,13 @@
                                     <action selector="cleanCache:" destination="BYZ-38-t0r" eventType="touchUpInside" id="IbJ-Xg-t4I"/>
                                 </connections>
                             </button>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="e3U-eg-5oS">
+                                <rect key="frame" x="166" y="114" width="42" height="21"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
@@ -135,8 +142,11 @@
                     </view>
                     <navigationItem key="navigationItem" id="jCA-8F-FEd"/>
                     <connections>
+                        <outlet property="currentIndex" destination="e3U-eg-5oS" id="shF-Kq-wsq"/>
                         <outlet property="currentTime" destination="9hr-7T-EMQ" id="tUK-Ab-2dp"/>
+                        <outlet property="nextItem" destination="O4p-T0-zfx" id="oKQ-F9-dsZ"/>
                         <outlet property="play" destination="FgJ-Vb-lNL" id="QJ6-Pz-Qt1"/>
+                        <outlet property="pre" destination="NZ5-kD-0rl" id="ply-Oq-JUA"/>
                         <outlet property="seekTime" destination="jkU-ML-O4N" id="7oP-ur-bHj"/>
                         <outlet property="totalTime" destination="hq4-mr-Zew" id="SfR-Oo-8qP"/>
                     </connections>

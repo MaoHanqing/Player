@@ -10,6 +10,11 @@ import AVFoundation
 import SVProgressHUD
 class MainViewController: UIViewController {
 
+
+    @IBOutlet weak var currentIndex: UILabel!
+    
+    @IBOutlet weak var nextItem: UIButton!
+    @IBOutlet weak var pre: UIButton!
     @IBOutlet weak var play: UIButton!
     @IBOutlet weak var seekTime: UITextField!
     @IBOutlet weak var totalTime: UILabel!
@@ -21,11 +26,12 @@ class MainViewController: UIViewController {
         SVProgressHUD.setDefaultStyle(.dark)
         SVProgressHUD.show()
         PlayManager.default.cyclePlay = true
-        PlayManager.prepare([
+        let urls = [
             "http://sc1.111ttt.cn:8282/2017/1/11m/11/304112002347.m4a?#.mp3",
             "http://sc1.111ttt.cn/2016/1/06/01/199012102390.mp3",
             "http://sc1.111ttt.cn:8282/2017/1/05m/09/298092040183.m4a?#.mp3",
-            "http://sc1.111ttt.cn:8282/2018/1/03m/13/396131202421.m4a?#.mp3"],
+            "http://sc1.111ttt.cn:8282/2018/1/03m/13/396131202421.m4a?#.mp3"]
+        PlayManager.prepare(urls,
                             playerResult:{[weak self](player,result) in
             
             switch result{
@@ -34,10 +40,22 @@ class MainViewController: UIViewController {
             case .playing(let current,let total):
                 self?.currentTime.text = "\(current)"
                 self?.totalTime.text = "\(total)"
-            case .existNextSong(let exist):
+            case .playResourceExist(let exist):
                 if !exist{
                     SVProgressHUD.show()
                 }
+            case .playItemIndex(let index):
+                self?.currentIndex.text = "\(index)"
+                if index == 0{
+                    self?.pre.isEnabled = false
+                    return
+                }else if index == urls.count - 1 {
+                    self?.nextItem.isEnabled = false
+                    return
+                }
+                self?.pre.isEnabled = true
+                self?.nextItem.isEnabled = true
+                    
             case .playerStateChange(let state):
                 print("======\n \(state) \n")
                 switch state{
@@ -59,8 +77,9 @@ class MainViewController: UIViewController {
                 }
             }
         })
-       
+        
     }
+ 
     func  setSelected(_ selected:Bool)  {
         guard  selected != self.play.isSelected else {
             return
@@ -98,11 +117,12 @@ class MainViewController: UIViewController {
         PlayManager.pause()
     }
     @IBAction func pre(_ sender: UIButton) {
+    
         PlayManager.previousTrack()
-        
     }
     
     @IBAction func next(_ sender: UIButton) {
+ 
         PlayManager.next()
     }
     @IBAction func seek(_ sender: Any) {
@@ -119,5 +139,6 @@ class MainViewController: UIViewController {
     @IBAction func cleanCache(_ sender: Any) {
         PlayManager.cleanCache()
     }
+ 
 }
 
