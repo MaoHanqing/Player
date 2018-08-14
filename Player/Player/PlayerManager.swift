@@ -11,7 +11,11 @@ import MediaPlayer
 class PlayManager: NSObject {
     typealias playerResultCallBack = (AVPlayer?, PlayerResult) -> Void
     
-    static var `default` = PlayManager()
+    static var `default`:PlayManager = {
+        let manager = PlayManager()
+        manager.backgroundPlayRemoteFuncRegister()
+        return manager
+    }()
     fileprivate var playAssets = [PlayerAsset]()
     fileprivate var playingAsset: PlayerAsset?
     fileprivate var playItemList = [String]()
@@ -19,7 +23,7 @@ class PlayManager: NSObject {
     fileprivate var timeObserver: Any?
 //    fileprivate var playItemURL: String?
     fileprivate var immediatelyPlay = false
-    
+    var defaultCover :UIImage?
     var player: AVPlayer? // player
     var duration = 0.0 //currentItem duration
     var autoPlayNextSong = true
@@ -216,6 +220,7 @@ extension PlayManager {
         self.addPeriodicTimeObserver()
         //playerItem
         self.player?.currentItem?.addObserver(self, forKeyPath: "status", options: .new, context: nil)
+        self.updatePlayingInfo()
     }
     fileprivate func removeObserver() {
         NotificationCenter.default.removeObserver(self)
@@ -296,26 +301,37 @@ extension PlayManager {
 extension PlayManager{
     // 设置后台播放显示信息
     func updatePlayingInfo() {
-        let mpic = MPNowPlayingInfoCenter.default()
-        
-        //专辑封面
-        let mySize = CGSize(width: 400, height: 400)
-        let albumArt = MPMediaItemArtwork(boundsSize:mySize) { sz in
-            return UIImage(named: "pic_popup_freetrail copy")!
+        guard let player = self.player else {
+            return
         }
         
-        //获取进度
-        let postion = CMTimeGetSeconds(self.player!.currentTime())
-        let duration = CMTimeGetSeconds(self.player!.currentItem!.duration)
-        mpic.nowPlayingInfo = [MPMediaItemPropertyTitle: "我是歌曲标题",
-                               MPMediaItemPropertyArtist: "hangge.com",
-                               MPMediaItemPropertyArtwork: albumArt,
-                               MPNowPlayingInfoPropertyElapsedPlaybackTime: postion,
-                               MPMediaItemPropertyPlaybackDuration: duration]
+        let mpic = MPNowPlayingInfoCenter.default()
+        let cover = self.playingAsset?.cover ?? self.defaultCover
+        let postion = CMTimeGetSeconds(player.currentTime())
+        var info :[String:Any] = [MPNowPlayingInfoPropertyElapsedPlaybackTime:postion,
+                    MPMediaItemPropertyPlaybackDuration: self.duration]
+        
+        if let cover = cover{
+            //专辑封面
+            let mySize = CGSize(width: 400, height: 400)
+            
+            let albumArt = MPMediaItemArtwork(boundsSize:mySize) { sz in
+                return cover
+            }
+            info[MPMediaItemPropertyArtwork] = albumArt
+        }
+        if let title = self.playingAsset?.title{
+            info[MPMediaItemPropertyTitle] = title
+        }
+        if let artist = self.playingAsset?.artist{
+            info[MPMediaItemPropertyArtist] = artist
+        }
+        
+        mpic.nowPlayingInfo = info
 
     }
     
-    func remoteFunc(){
+    func backgroundPlayRemoteFuncRegister(){
         MPRemoteCommandCenter.shared().nextTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
             PlayManager.next()
             return .success
