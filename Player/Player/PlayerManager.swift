@@ -12,10 +12,12 @@ class PlayManager: NSObject {
     typealias playerResultCallBack = (AVPlayer?, PlayerResult) -> Void
     
     static var `default` = PlayManager()
+    fileprivate var playAssets = [PlayerAsset]()
+    fileprivate var playingAsset: PlayerAsset?
     fileprivate var playItemList = [String]()
     fileprivate var playerResult: playerResultCallBack?
     fileprivate var timeObserver: Any?
-    fileprivate var playItemURL: String?
+//    fileprivate var playItemURL: String?
     fileprivate var immediatelyPlay = false
     
     var player: AVPlayer? // player
@@ -43,12 +45,16 @@ class PlayManager: NSObject {
         self.prepare([url], playerResult: playerResult)
     }
     static func prepare(_ urls: [String], playerResult: playerResultCallBack? = nil) {
-        
-        self.default.playerResult = playerResult
-        self.default.playItemList = urls
-        self.default.play(with: urls.first)
+        let assets = urls.map { (url) -> PlayerAsset in
+            return PlayerAsset(url: url)
+        }
+        self.prepare(assets)
     }
-   
+    static func prepare(_ assets: [PlayerAsset], playerResult: playerResultCallBack? = nil) {
+        self.default.playerResult = playerResult
+        self.default.playAssets = assets
+        self.default.play(with: assets.first)
+    }
     
 }
 
@@ -60,7 +66,7 @@ extension PlayManager{
         case .pause, .readyToPlay, .replay:
             self.default.state = .play
             guard let player = self.default.player else {
-                self.default.play(with: self.default.playItemURL)
+                self.default.play(with: self.default.playingAsset)
                 return
             }
             player.play()
@@ -79,38 +85,38 @@ extension PlayManager{
     }
     static func replay() {
         self.default.state = .replay
-        self.default.play(with: self.default.playItemURL!, immediatelyPlay: true)
+        self.default.play(with: self.default.playingAsset, immediatelyPlay: true)
     }
     static func next() {
         let index = self.default.currentPlayItemIndex
         
-        if index < self.default.playItemList.count - 1 {
-            self.replacePlay( self.default.playItemList[index + 1])
+        if index < self.default.playAssets.count - 1 {
+            self.replacePlay( self.default.playAssets[index + 1])
             return
         }
         
         self.default.state = .trailOfPlayList
         
         if self.default.cyclePlay {
-            self.replacePlay(self.default.playItemList.first, immediatelyPlay: true)
+            self.replacePlay(self.default.playAssets.first, immediatelyPlay: true)
         }
     }
     
     static func previousTrack() {
         let index = self.default.currentPlayItemIndex
         if index > 0 {
-            self.replacePlay(self.default.playItemList[index - 1])
+            self.replacePlay(self.default.playAssets[index - 1])
             return
         }
         self.default.state = .topOfPlayList
         if self.default.cyclePlay {
-            self.replacePlay(self.default.playItemList.last, immediatelyPlay: true)
+            self.replacePlay(self.default.playAssets.last, immediatelyPlay: true)
         }
     }
     
-    static func replacePlay(_ url: String?, immediatelyPlay: Bool = true) {
+    static func replacePlay(_ asset: PlayerAsset?, immediatelyPlay: Bool = true) {
         self.stop()
-        self.default.play(with: url, immediatelyPlay: immediatelyPlay)
+        self.default.play(with: asset, immediatelyPlay: immediatelyPlay)
     }
     static func stop() {
         if self.default.state == .stop {
@@ -118,7 +124,7 @@ extension PlayManager{
         }
         self.default.removeObserver()
         self.default.player = nil
-        DownloadManager.cancelDownload(self.default.playItemURL ?? "")
+        DownloadManager.cancelDownload(self.default.playingAsset?.url ?? "")
         self.default.state = .stop
     }
     
@@ -138,7 +144,7 @@ extension PlayManager{
     static func seek(to time: CMTime, completion:(() -> Void)? = nil) {
         // seek to the specific time
         if self.default.state == .finish {
-            self.default.play(with: self.default.playItemURL!, immediatelyPlay: false)
+            self.default.play(with: self.default.playingAsset, immediatelyPlay: false)
         }
         self.default.seeking = true
         self.default.player?.seek(to: time, completionHandler: { (result) in
@@ -156,16 +162,20 @@ extension PlayManager{
 //Player Play Events
 extension PlayManager {
     
-    fileprivate func play(with url: String?, immediatelyPlay: Bool = false) {
+    fileprivate func play(with asset: PlayerAsset?, immediatelyPlay: Bool = false) {
         self.state = .wait
-        self.playItemURL = url
+        self.playingAsset = asset
       
-        guard let _url = url else {
+        guard let asset = asset , let _url = asset.url else {
             invokeResultCallBack(.failure(PlayerError.getEmptyURLError()))
             self.state = .error
             return
         }
-        self.currentPlayItemIndex = self.playItemList.index(of: _url) ?? 0
+        
+        
+        
+        
+        self.currentPlayItemIndex =  self.playAssets.index{ $0.url == asset.url} ?? 0
         let exist = DownloadCache.isFileExist(atPath: DownloadCache.cachePath(url: URL(fileURLWithPath: _url)))
         invokeResultCallBack(.playResourceExist(exist))
         
@@ -173,7 +183,7 @@ extension PlayManager {
             self.player = AVPlayer()
         }
         
-        DownloadManager.default.downloadResource(resourcePath: url, cacheDirectoryName: "Audio") { [weak self] (downloadReuslt) -> Void in
+        DownloadManager.default.downloadResource(resourcePath: _url, cacheDirectoryName: "Audio") { [weak self] (downloadReuslt) -> Void in
             switch downloadReuslt {
             case.success(let url):
                 let playerItem = AVPlayerItem(url: url)
