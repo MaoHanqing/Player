@@ -7,7 +7,8 @@ import Foundation
 public class DownloadCache {
     
     ///  In the sandbox cactes directory, custom your cache directory
-    static var cachesDirectory :String = "default"{
+    static let defaultCachesDirectory = "default"
+    static var cachesDirectory :String = defaultCachesDirectory{
         willSet
         {
             createDirectory(atPath: cachesDirectory)
@@ -82,7 +83,7 @@ public class DownloadCache {
         
     }
     ///  delete all downloaded files
-    public static func cleanDownloadFiles(){
+    static func cleanDownloadFiles(){
         
         removeItem(atPath: cachesDirectory.cacheDir)
         createDirectory(atPath: cachesDirectory.cacheDir)

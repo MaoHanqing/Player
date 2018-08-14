@@ -22,6 +22,7 @@
 		EC11608A2106CDA600315755 /* DownloadCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC1160872106CDA600315755 /* DownloadCache.swift */; };
 		EC11608B2106CDA600315755 /* DownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC1160882106CDA600315755 /* DownloadManager.swift */; };
 		EC1162B22106D24200315755 /* String+md5.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC1162B12106D24100315755 /* String+md5.swift */; };
+		ECEB7CB22122B1E300B7A804 /* PlayerHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECEB7CB12122B1E300B7A804 /* PlayerHelper.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +45,7 @@
 		EC1160872106CDA600315755 /* DownloadCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DownloadCache.swift; sourceTree = "<group>"; };
 		EC1160882106CDA600315755 /* DownloadManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DownloadManager.swift; sourceTree = "<group>"; };
 		EC1162B12106D24100315755 /* String+md5.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "String+md5.swift"; sourceTree = "<group>"; };
+		ECEB7CB12122B1E300B7A804 /* PlayerHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerHelper.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -91,6 +93,7 @@
 				EC1160852106CDA600315755 /* Helper */,
 				EC11607E2105DFBE00315755 /* MainViewController.swift */,
 				EC11607D2105DFBE00315755 /* PlayerManager.swift */,
+				ECEB7CB12122B1E300B7A804 /* PlayerHelper.swift */,
 				EC1160802105DFBE00315755 /* PlayerRequestLoader.swift */,
 				EC11607F2105DFBE00315755 /* PlayerRequestTask.swift */,
 				EC1160682105DF9D00315755 /* AppDelegate.swift */,
@@ -253,6 +256,7 @@
 				EC1160712105DF9D00315755 /* Player.xcdatamodeld in Sources */,
 				EC1160822105DFBE00315755 /* MainViewController.swift in Sources */,
 				EC1160832105DFBE00315755 /* PlayerRequestTask.swift in Sources */,
+				ECEB7CB22122B1E300B7A804 /* PlayerHelper.swift in Sources */,
 				EC1160892106CDA600315755 /* DownloadHelper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

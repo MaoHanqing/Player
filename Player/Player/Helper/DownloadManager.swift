@@ -6,15 +6,23 @@ import Alamofire
 public enum DownloadResourceStatus{
     case downloading
     case downloaded
-    case cancle
+    case cancel
     case failure
     case unknow
     case beginDownload
 }
-public struct DownloadResource {
+public class DownloadResource {
     var status : DownloadResourceStatus = .unknow
-    var url:String
+    var url:String = ""
     var requestTask:DownloadRequest?
+    var cacheDirectory :String = ""
+    convenience init(status: DownloadResourceStatus = .beginDownload, url: String, requestTask: DownloadRequest? = nil, cacheDirectory: String) {
+        self.init()
+        self.status = status
+        self.url = url
+        self.requestTask = requestTask
+        self.cacheDirectory = cacheDirectory
+    }
 }
 // 找到合适的方法来表明下载和非下载状态 方便UI层调用下载与否
 public class DownloadManager: NSObject {
@@ -56,41 +64,33 @@ public class DownloadManager: NSObject {
         }
     }
     public static func cancelDownload(_ url:String){
-        if var resource = self.default.downloadResources[url] {
-            resource.status = .cancle
+        if let resource = self.default.downloadResources[url] {
             resource.requestTask?.cancel()
+            resource.status = .cancel
         }
     }
-    public func resumeDownload(_ url:String?,progress:ProgressHandler? = nil, completionHandler: @escaping (DownloadResult<URL>) -> (Void)){
-        guard let path = url, !path.isEmpty else {
-            completionHandler(DownloadResult.failure(self.getUrlEmptyError()))
-            return
+    public static func cleanAllDownloadFiles(){
+        DownloadCache.cleanDownloadFiles()
+        for resource in self.default.downloadResources {
+            resource.value.status = .cancel
+            resource.value.requestTask?.cancel()
         }
-        downloadFile(resourceUrl: path, destination: getCacheDestination(url: path.url),progress:progress, completionHandler: {(result) -> (Void) in
-            switch result{
-            case .success(let cacheUrl):
-                print("下载完成")
-                completionHandler(DownloadResult.success(cacheUrl.url))
-            case .failureUrl(let err, let path):
-                completionHandler(DownloadResult.failureUrl(err, path))
-            default: break
-            }
-        })
+    }
+    public func resumeDownload(_ resource:String?,progress:ProgressHandler? = nil, completionHandler: @escaping (DownloadResult<URL>) -> (Void)){
+        
+        downloadResource(resourcePath: resource, cacheDirectoryName: nil, progress: progress, completionHandler: completionHandler)
     }
     public  func downloadResource(resourcePath: String?,cacheDirectoryName:String? = nil,progress:ProgressHandler? = nil, completionHandler: @escaping (DownloadResult<URL>) -> (Void)) {
-        if let cacheDirectoryName = cacheDirectoryName{
-            DownloadCache.cachesDirectory = cacheDirectoryName
-        }
         guard let path = resourcePath, !path.isEmpty else {
             completionHandler(DownloadResult.failure(self.getUrlEmptyError()))
             return
         }
-        
         if let localUrl = isFileExisted(url: path.url){
             print("播放本地文件")
             completionHandler(DownloadResult.success(localUrl))
             return
         }
+        DownloadCache.cachesDirectory = self.getCacheDirectoryName(resourcePath: path, cacheDirectoryName: cacheDirectoryName)
        
         downloadFile(resourceUrl: path, destination: getCacheDestination(url: path.url),progress:progress, completionHandler: {(result) -> (Void) in
             switch result{
@@ -105,7 +105,15 @@ public class DownloadManager: NSObject {
         })
         
     }
-    
+    func getCacheDirectoryName(resourcePath:String,cacheDirectoryName:String?)->String{
+        if let cacheDirectoryName = cacheDirectoryName{
+            return cacheDirectoryName
+        }
+        if let cacheDirectoryName = self.downloadResources[resourcePath]?.cacheDirectory{
+            return cacheDirectoryName
+        }
+        return DownloadCache.defaultCachesDirectory
+    }
     public func reloadSingleFile(localPath: String, remotePath: String, cacheDirectoryName:String, progress:ProgressHandler? = nil ,completionHandler: @escaping (DownloadResult<URL>) -> (Void)) {
         //  先删除本地的
         DownloadCache.removeItem(atPath: localPath)
@@ -117,30 +125,31 @@ public class DownloadManager: NSObject {
     
     func downloadFile(resourceUrl: String, destination: DownloadRequest.DownloadFileDestination?,progress:ProgressHandler? = nil, completionHandler: @escaping (DownloadResult<String>) -> (Void)) {
         
-        var downloadResources = self.downloadResources[resourceUrl]
+        let downloadResources = self.downloadResources[resourceUrl] ?? DownloadResource(url: resourceUrl,cacheDirectory: DownloadCache.cachesDirectory)
         
-        if let data = downloadResources?.requestTask?.resumeData{
-            downloadResources!.requestTask = Alamofire.download(resumingWith: data, to: destination)
-            downloadResources?.status = .downloading
+        if let data = downloadResources.requestTask?.resumeData{
+            downloadResources.requestTask = Alamofire.download(resumingWith: data, to: destination)
+            downloadResources.status = .downloading
         }else {
            let downloadRequst = Alamofire.download(resourceUrl, to: destination).validate(statusCode: 200..<400).response { (response) in
-                
+            
                 if response.error == nil, let localPath = response.destinationURL?.path {
-                    downloadResources?.status = .downloaded
+                    downloadResources.status = .downloaded
                     completionHandler(DownloadResult.success(localPath))
-                } else {
-                    downloadResources?.status = .failure
-                    completionHandler(DownloadResult.failureUrl(response.error!, response.destinationURL?.path))
+                    return
                 }
+                    completionHandler(DownloadResult.failureUrl(response.error!, response.destinationURL?.path))
+            
             }
-            downloadResources = DownloadResource(status: .downloading, url: resourceUrl, requestTask: downloadRequst)
-            self.downloadResources[resourceUrl] = downloadResources!
+            downloadResources.status = .downloading
+            downloadResources.requestTask = downloadRequst
+            self.downloadResources[resourceUrl] = downloadResources
         }
-        guard  progress != nil  else {
+        guard let progress = progress   else {
             return
         }
-        downloadResources!.requestTask?.downloadProgress(queue: DispatchQueue.main, closure: { (_progress) in
-            progress!(downloadResources!,_progress)
+        downloadResources.requestTask?.downloadProgress(queue: DispatchQueue.main, closure: { (_progress) in
+            progress(downloadResources,_progress)
         })
     }
     func isFileExisted(url: URL, prePath: String? = nil) -> URL? {
@@ -178,4 +187,3 @@ public class DownloadManager: NSObject {
         }
     }
 }
-

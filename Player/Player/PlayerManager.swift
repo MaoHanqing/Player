@@ -6,50 +6,10 @@
 
 import AVFoundation
 import Foundation
-
-struct PlayerError {
-    enum PlayerErrorCode: Int {
-        case loadingFail = 400
-        case emptyURL = 401
-    }
-    static let PlayerErrorDomain = "playerDomain"
-    static func getNetworkLoadFailError() -> Error {
-        return self.setError(info: "loading fail,server error", errorCode: PlayerErrorCode.loadingFail)
-    }
-    static func getEmptyURLError() -> Error {
-        return self.setError(info: "url is empty", errorCode: PlayerErrorCode.emptyURL)
-    }
-    static func setError(info: String, errorCode: PlayerErrorCode) -> Error {
-        let errorInfo = ["errMsg": info]
-        let error = NSError(domain: PlayerErrorDomain, code: errorCode.rawValue, userInfo: errorInfo)
-        return error as Error
-    }
-}
-
-public enum PlayerResult {
-    case playResourceExist(Bool)
-    case failure(Error)
-    case playing(Double, Double)
-    case playerStateChange(PlayerState)
-    case playItemIndex(Int)
-}
-
-public enum PlayerState {
-    case stop
-    case play
-    case wait
-    case error
-    case pause
-    case unkonw
-    case replay
-    case finish
-    case buffering
-    case readyToPlay
-    case topOfPlayList
-    case trailOfPlayList
-}
+import MediaPlayer
 
 class PlayManager: NSObject {
+    typealias playerResultCallBack = (AVPlayer?, PlayerResult) -> Void
     
     static var `default` = PlayManager()
     fileprivate var playItemList = [String]()
@@ -63,6 +23,8 @@ class PlayManager: NSObject {
     var autoPlayNextSong = true
     var periodicTime = 0.3
     var cyclePlay = false
+    /// 是否正在seek中
+    var seeking: Bool = false
     //player state
     var state = PlayerState.unkonw {
         didSet {
@@ -81,10 +43,17 @@ class PlayManager: NSObject {
         self.prepare([url], playerResult: playerResult)
     }
     static func prepare(_ urls: [String], playerResult: playerResultCallBack? = nil) {
+        
         self.default.playerResult = playerResult
         self.default.playItemList = urls
         self.default.play(with: urls.first)
     }
+   
+    
+}
+
+//Player Command Func
+extension PlayManager{
     static func play() {
         //play the item
         switch self.default.state {
@@ -168,21 +137,24 @@ class PlayManager: NSObject {
     }
     static func seek(to time: CMTime, completion:(() -> Void)? = nil) {
         // seek to the specific time
+        if self.default.state == .finish {
+            self.default.play(with: self.default.playItemURL!, immediatelyPlay: false)
+        }
+        self.default.seeking = true
         self.default.player?.seek(to: time, completionHandler: { (result) in
             if result {
                 completion?()
+                self.default.seeking = false
             }
         })
     }
     static  func cleanCache() {
         DownloadCache.cleanDownloadFiles()
     }
-    
 }
 
+//Player Play Events
 extension PlayManager {
-    
-    typealias playerResultCallBack = (AVPlayer?, PlayerResult) -> Void
     
     fileprivate func play(with url: String?, immediatelyPlay: Bool = false) {
         self.state = .wait
@@ -304,7 +276,53 @@ extension PlayManager {
         
         self.timeObserver = self.player?.addPeriodicTimeObserver(forInterval: interval, queue: mainQueue) { [weak self] time in
             // update player transport UI
-            self?.invokeResultCallBack(.playing(CMTimeGetSeconds(time), (self?.duration)!))
+            if self?.seeking != true {
+                self?.invokeResultCallBack(.playing(CMTimeGetSeconds(time), (self?.duration)!))
+            }
         }
+    }
+}
+// BackPlayerInfo
+extension PlayManager{
+    // 设置后台播放显示信息
+    func updatePlayingInfo() {
+        let mpic = MPNowPlayingInfoCenter.default()
+        
+        //专辑封面
+        let mySize = CGSize(width: 400, height: 400)
+        let albumArt = MPMediaItemArtwork(boundsSize:mySize) { sz in
+            return UIImage(named: "pic_popup_freetrail copy")!
+        }
+        
+        //获取进度
+        let postion = CMTimeGetSeconds(self.player!.currentTime())
+        let duration = CMTimeGetSeconds(self.player!.currentItem!.duration)
+        mpic.nowPlayingInfo = [MPMediaItemPropertyTitle: "我是歌曲标题",
+                               MPMediaItemPropertyArtist: "hangge.com",
+                               MPMediaItemPropertyArtwork: albumArt,
+                               MPNowPlayingInfoPropertyElapsedPlaybackTime: postion,
+                               MPMediaItemPropertyPlaybackDuration: duration]
+
+    }
+    
+    func remoteFunc(){
+        MPRemoteCommandCenter.shared().nextTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
+            PlayManager.next()
+            return .success
+        }
+        MPRemoteCommandCenter.shared().pauseCommand.addTarget { (_) -> MPRemoteCommandHandlerStatus in
+            PlayManager.pause()
+            return .success
+        }
+        MPRemoteCommandCenter.shared().playCommand.addTarget { (_) -> MPRemoteCommandHandlerStatus in
+            PlayManager.play()
+            return .success
+        }
+        MPRemoteCommandCenter.shared().previousTrackCommand.addTarget { (_) -> MPRemoteCommandHandlerStatus in
+            PlayManager.previousTrack()
+            return .success
+        }
+    
+        
     }
 }
