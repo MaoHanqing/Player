@@ -31,12 +31,12 @@ public enum PlayerState {
     case topOfPlayList
     case trailOfPlayList
 }
-struct PlayerAsset {
+public struct PlayerAsset {
     let url :String?
     let title:String?
     let cover:UIImage?
     let artist:String?
-     init(url:String?,title:String? = nil,artist:String? =  nil,cover:UIImage? = nil) {
+    public init(url:String?,title:String? = nil,artist:String? =  nil,cover:UIImage? = nil) {
         self.url = url
         self.cover = cover
         self.artist = artist

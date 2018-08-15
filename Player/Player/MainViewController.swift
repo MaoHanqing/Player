@@ -26,17 +26,21 @@ class MainViewController: UIViewController {
         SVProgressHUD.setDefaultStyle(.dark)
         SVProgressHUD.show()
         PlayManager.default.cyclePlay = true
+        PlayManager.default.isBackgroundPlay = false
+        PlayManager.default.defaultCover = #imageLiteral(resourceName: "pic_popup_freetrail copy")
+//        http://sc1.111ttt.cn:8282/2017/1/11m/11/304112002347.m4a?#.mp3
         let urls = [
-            "http://sc1.111ttt.cn:8282/2017/1/11m/11/304112002347.m4a?#.mp3",
-            "http://sc1.111ttt.cn/2016/1/06/01/199012102390.mp3",
-            "http://sc1.111ttt.cn:8282/2017/1/05m/09/298092040183.m4a?#.mp3",
-            "http://sc1.111ttt.cn:8282/2018/1/03m/13/396131202421.m4a?#.mp3"]
+            PlayerAsset(url: "http://sc1.111ttt.cn:8282/2017/1/11m/11/3041120023", title: "追光者", artist: "岑宁儿"),
+            PlayerAsset(url: "http://sc1.111ttt.cn/2016/1/06/01/199012102390.mp3", title: "小楼一夜听春雨", artist: "任然"),
+            PlayerAsset(url: "http://sc1.111ttt.cn:8282/2017/1/05m/09/298092040183.m4a?#.mp3", title: "凉城", artist: "任然"),
+            PlayerAsset(url: "http://sc1.111ttt.cn:8282/2018/1/03m/13/396131202421.m4a?#.mp3", title: "佛系少女", artist: "冯提莫")]
         PlayManager.prepare(urls,
                             playerResult:{[weak self](player,result) in
             
             switch result{
             case.failure(let error):
                 print(error)
+                SVProgressHUD.dismiss()
             case .playing(let current,let total):
                 self?.currentTime.text = "\(current)"
                 self?.totalTime.text = "\(total)"

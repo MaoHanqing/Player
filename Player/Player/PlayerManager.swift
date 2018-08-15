@@ -13,7 +13,7 @@ class PlayManager: NSObject {
     
     static var `default`:PlayManager = {
         let manager = PlayManager()
-        manager.backgroundPlayRemoteFuncRegister()
+        manager.isBackgroundPlay = true
         return manager
     }()
     fileprivate var playAssets = [PlayerAsset]()
@@ -29,6 +29,13 @@ class PlayManager: NSObject {
     var autoPlayNextSong = true
     var periodicTime = 0.3
     var cyclePlay = false
+    var isBackgroundPlay = false{
+        didSet{
+            if isBackgroundPlay{
+                self.backgroundPlayRemoteFuncRegister()
+            }
+        }
+    }
     /// 是否正在seek中
     var seeking: Bool = false
     //player state
@@ -52,7 +59,7 @@ class PlayManager: NSObject {
         let assets = urls.map { (url) -> PlayerAsset in
             return PlayerAsset(url: url)
         }
-        self.prepare(assets)
+        self.prepare(assets,playerResult:playerResult)
     }
     static func prepare(_ assets: [PlayerAsset], playerResult: playerResultCallBack? = nil) {
         self.default.playerResult = playerResult
@@ -74,6 +81,7 @@ extension PlayManager{
                 return
             }
             player.play()
+            self.default.updatePlayingInfo()
         case .finish:
             self.replay()
         default:
@@ -220,7 +228,6 @@ extension PlayManager {
         self.addPeriodicTimeObserver()
         //playerItem
         self.player?.currentItem?.addObserver(self, forKeyPath: "status", options: .new, context: nil)
-        self.updatePlayingInfo()
     }
     fileprivate func removeObserver() {
         NotificationCenter.default.removeObserver(self)
@@ -332,7 +339,8 @@ extension PlayManager{
     }
     
     func backgroundPlayRemoteFuncRegister(){
-        MPRemoteCommandCenter.shared().nextTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
+       
+       MPRemoteCommandCenter.shared().nextTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
             PlayManager.next()
             return .success
         }
@@ -348,7 +356,5 @@ extension PlayManager{
             PlayManager.previousTrack()
             return .success
         }
-    
-        
     }
 }

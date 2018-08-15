@@ -131,6 +131,7 @@ public class DownloadManager: NSObject {
             downloadResources.requestTask = Alamofire.download(resumingWith: data, to: destination)
             downloadResources.status = .downloading
         }else {
+            Alamofire.SessionManager.default.session.configuration.timeoutIntervalForRequest = 30
            let downloadRequst = Alamofire.download(resourceUrl, to: destination).validate(statusCode: 200..<400).response { (response) in
             
                 if response.error == nil, let localPath = response.destinationURL?.path {
