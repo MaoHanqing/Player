@@ -11,7 +11,7 @@ public class DownloadCache {
     static var cachesDirectory :String = defaultCachesDirectory{
         willSet
         {
-            createDirectory(atPath: cachesDirectory)
+            createDirectory(atPath: cachesDirectory.cacheDir)
         }
     }
     

@@ -27,9 +27,9 @@ public enum PlayerState {
     case replay
     case finish
     case buffering
+    case listFinish
     case readyToPlay
-    case topOfPlayList
-    case trailOfPlayList
+   
 }
 public struct PlayerAsset {
     let url :String?

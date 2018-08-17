@@ -7,13 +7,17 @@
 import AVFoundation
 import Foundation
 import MediaPlayer
-
+    // 多个页面持有播放器 如何调用 duoge yemian bofang block huidiao?notification
 class PlayManager: NSObject {
     typealias playerResultCallBack = (AVPlayer?, PlayerResult) -> Void
     
     static var `default`:PlayManager = {
         let manager = PlayManager()
         manager.isBackgroundPlay = true
+        let audioSession = AVAudioSession.sharedInstance()
+        try! audioSession.setCategory(AVAudioSessionCategoryPlayback)
+        try! audioSession.setActive(true)
+        
         return manager
     }()
     fileprivate var playAssets = [PlayerAsset]()
@@ -107,7 +111,7 @@ extension PlayManager{
             return
         }
         
-        self.default.state = .trailOfPlayList
+//        self.default.state = .trailOfPlayList
         
         if self.default.cyclePlay {
             self.replacePlay(self.default.playAssets.first, immediatelyPlay: true)
@@ -120,7 +124,7 @@ extension PlayManager{
             self.replacePlay(self.default.playAssets[index - 1])
             return
         }
-        self.default.state = .topOfPlayList
+//        self.default.state = .topOfPlayList
         if self.default.cyclePlay {
             self.replacePlay(self.default.playAssets.last, immediatelyPlay: true)
         }
@@ -188,7 +192,7 @@ extension PlayManager {
         
         
         self.currentPlayItemIndex =  self.playAssets.index{ $0.url == asset.url} ?? 0
-        let exist = DownloadCache.isFileExist(atPath: DownloadCache.cachePath(url: URL(fileURLWithPath: _url)))
+        let exist = DownloadCache.isFileExist(url: URL(fileURLWithPath: _url))
         invokeResultCallBack(.playResourceExist(exist))
         
         if self.player == nil {
@@ -221,7 +225,7 @@ extension PlayManager {
     fileprivate func addObserver() {
         
         //播放完成
-        NotificationCenter.default.addObserver(self, selector: #selector(self.playbackDidFinish), name: Notification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(self.playDidFinish), name: Notification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
         //打断处理
         NotificationCenter.default.addObserver(self, selector: #selector(self.audioSessionInterrupted), name: Notification.Name.AVAudioSessionInterruption, object: nil)
         //播放进度
@@ -260,13 +264,15 @@ extension PlayManager {
         }
     }
     @objc
-    fileprivate func playbackDidFinish() {
+    fileprivate func playDidFinish() {
         PlayManager.stop()
         self.state = .finish
+        if self.currentPlayItemIndex == self.playItemList.count - 1 {
+            self.state = .listFinish
+        }
         if self.autoPlayNextSong {
             PlayManager.next()
         }
-        
     }
     @objc
     fileprivate func audioSessionInterrupted(_ notification: Notification) {

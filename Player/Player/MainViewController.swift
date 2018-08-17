@@ -26,7 +26,7 @@ class MainViewController: UIViewController {
         SVProgressHUD.setDefaultStyle(.dark)
         SVProgressHUD.show()
         PlayManager.default.cyclePlay = true
-        PlayManager.default.isBackgroundPlay = false
+        PlayManager.default.isBackgroundPlay = true
         PlayManager.default.defaultCover = #imageLiteral(resourceName: "pic_popup_freetrail copy")
 //        http://sc1.111ttt.cn:8282/2017/1/11m/11/304112002347.m4a?#.mp3
         let urls = [
@@ -60,12 +60,6 @@ class MainViewController: UIViewController {
                 case .readyToPlay:
                     self?.play.isEnabled = true
                     SVProgressHUD.dismiss()
-                case .topOfPlayList:
-                    self?.showToast("已经是第一首")
-                    SVProgressHUD.dismiss(withDelay: 1.5)
-                case .trailOfPlayList:
-                   self?.showToast("已经是最后一首")
-                    SVProgressHUD.dismiss(withDelay: 1.5)
                 case .wait:
                     self?.resetUI()
                 default:
