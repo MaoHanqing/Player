@@ -6,36 +6,52 @@
 
 import AVFoundation
 import Foundation
+import Kingfisher
 import MediaPlayer
-    // 多个页面持有播放器 如何调用 duoge yemian bofang block huidiao?notification
 class PlayManager: NSObject {
     typealias playerResultCallBack = (AVPlayer?, PlayerResult) -> Void
-    
     static var `default`:PlayManager = {
         let manager = PlayManager()
+        do {
+            try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            return manager
+        }
         manager.isBackgroundPlay = true
-        let audioSession = AVAudioSession.sharedInstance()
-        try! audioSession.setCategory(AVAudioSessionCategoryPlayback)
-        try! audioSession.setActive(true)
-        
+        manager.cachePath = "Audio"
         return manager
     }()
     fileprivate var playAssets = [PlayerAsset]()
-    fileprivate var playingAsset: PlayerAsset?
+    var currentPlayingAsset: PlayerAsset? {
+        get {
+            guard self.currentPlayItemIndex < self.playAssets.count else {
+                return nil
+            }
+            return self.playAssets[self.currentPlayItemIndex]
+        }
+    }
     fileprivate var playItemList = [String]()
     fileprivate var playerResult: playerResultCallBack?
     fileprivate var timeObserver: Any?
-//    fileprivate var playItemURL: String?
-    fileprivate var immediatelyPlay = false
-    var defaultCover :UIImage?
+    var isImmediatelyPlay = true
+    // 多个页面持有播放器 如何调用 duoge yemian bofang block huidiao?notification
+    var defaultCover: UIImage?
     var player: AVPlayer? // player
     var duration = 0.0 //currentItem duration
     var autoPlayNextSong = true
     var periodicTime = 0.3
-    var cyclePlay = false
-    var isBackgroundPlay = false{
-        didSet{
-            if isBackgroundPlay{
+    var cyclePlay = true
+    var cachePath: String = "Audio"{
+        didSet {
+            
+            DownloadManager.default.cacheDicName = cachePath
+        }
+    }
+    var isImmediatelyDownload = true
+    var isBackgroundPlay = false {
+        didSet {
+            if isBackgroundPlay {
                 self.backgroundPlayRemoteFuncRegister()
             }
         }
@@ -49,8 +65,8 @@ class PlayManager: NSObject {
         }
     }
     
-    var currentPlayItemIndex = 0  {
-        didSet{
+    var currentPlayItemIndex = 0 {
+        didSet {
             invokeResultCallBack(.playItemIndex(currentPlayItemIndex))
         }
     }
@@ -61,47 +77,54 @@ class PlayManager: NSObject {
     }
     static func prepare(_ urls: [String], playerResult: playerResultCallBack? = nil) {
         let assets = urls.map { (url) -> PlayerAsset in
-            return PlayerAsset(url: url)
+            PlayerAsset(url: url)
         }
-        self.prepare(assets,playerResult:playerResult)
+        self.prepare(assets, playerResult: playerResult)
     }
-    static func prepare(_ assets: [PlayerAsset], playerResult: playerResultCallBack? = nil) {
+    static func prepare(_ assets: [PlayerAsset], willPlayIndex: Int = 0, playerResult: playerResultCallBack? = nil) {
         self.default.playerResult = playerResult
-        self.default.playAssets = assets
-        self.default.play(with: assets.first)
+        
+        self.default.readyToPlay(with: assets, willPlayIndex: willPlayIndex)
+      
     }
-    
 }
 
 //Player Command Func
-extension PlayManager{
+extension PlayManager {
     static func play() {
         //play the item
+        
         switch self.default.state {
         case .pause, .readyToPlay, .replay:
             self.default.state = .play
             guard let player = self.default.player else {
-                self.default.play(with: self.default.playingAsset)
+                self.default.readyToPlay(with: self.default.currentPlayingAsset)
                 return
             }
+
             player.play()
             self.default.updatePlayingInfo()
         case .finish:
             self.replay()
+        case .wait:
+            self.default.download(with: self.default.currentPlayingAsset!)
         default:
             break
         }
     }
-    
+    static func play(at index: Int) {
+        
+        self.replacePlay(self.default.playAssets[index])
+    }
     static func pause() {
         //pause the item
-        self.default.immediatelyPlay = false
         self.default.player?.pause()
         self.default.state = .pause
+        
     }
     static func replay() {
         self.default.state = .replay
-        self.default.play(with: self.default.playingAsset, immediatelyPlay: true)
+        self.default.readyToPlay(with: self.default.currentPlayingAsset)
     }
     static func next() {
         let index = self.default.currentPlayItemIndex
@@ -111,11 +134,12 @@ extension PlayManager{
             return
         }
         
-//        self.default.state = .trailOfPlayList
-        
         if self.default.cyclePlay {
-            self.replacePlay(self.default.playAssets.first, immediatelyPlay: true)
+            self.replacePlay(self.default.playAssets.first)
+            return
         }
+        
+        self.default.state = .trailOfPlayList
     }
     
     static func previousTrack() {
@@ -124,23 +148,30 @@ extension PlayManager{
             self.replacePlay(self.default.playAssets[index - 1])
             return
         }
-//        self.default.state = .topOfPlayList
+        
         if self.default.cyclePlay {
-            self.replacePlay(self.default.playAssets.last, immediatelyPlay: true)
+            self.replacePlay(self.default.playAssets.last)
+            return
         }
+        self.default.state = .topOfPlayList
     }
     
-    static func replacePlay(_ asset: PlayerAsset?, immediatelyPlay: Bool = true) {
+    static func replacePlay(_ asset: PlayerAsset?) {
         self.stop()
-        self.default.play(with: asset, immediatelyPlay: immediatelyPlay)
+        self.default.readyToPlay(with: asset)
+    }
+    static func replacePlay(_ assets: [PlayerAsset], willPlayIndex: Int = 0) {
+        self.stop()
+        self.default.readyToPlay(with: assets, willPlayIndex: willPlayIndex)
     }
     static func stop() {
         if self.default.state == .stop {
             return
         }
+        self.default.player?.pause()
         self.default.removeObserver()
         self.default.player = nil
-        DownloadManager.cancelDownload(self.default.playingAsset?.url ?? "")
+        DownloadManager.cancelDownload(self.default.currentPlayingAsset?.url ?? "")
         self.default.state = .stop
     }
     
@@ -160,63 +191,102 @@ extension PlayManager{
     static func seek(to time: CMTime, completion:(() -> Void)? = nil) {
         // seek to the specific time
         if self.default.state == .finish {
-            self.default.play(with: self.default.playingAsset, immediatelyPlay: false)
+            self.default.readyToPlay(with: self.default.currentPlayingAsset)
         }
         self.default.seeking = true
         self.default.player?.seek(to: time, completionHandler: { (result) in
             if result {
                 completion?()
                 self.default.seeking = false
+                    self.default.updatePlayingInfo()
             }
         })
     }
     static  func cleanCache() {
-        DownloadCache.cleanDownloadFiles()
+        //delete current
+        DownloadManager.cleanAllDownloadFiles()
     }
 }
 
 //Player Play Events
 extension PlayManager {
     
-    fileprivate func play(with asset: PlayerAsset?, immediatelyPlay: Bool = false) {
-        self.state = .wait
-        self.playingAsset = asset
-      
-        guard let asset = asset , let _url = asset.url else {
+    fileprivate func readyToPlay(with asset: PlayerAsset?) {
+        guard let asset = asset, let _url = asset.url else {
             invokeResultCallBack(.failure(PlayerError.getEmptyURLError()))
             self.state = .error
             return
         }
+
+        self.currentPlayItemIndex = self.playAssets.index { $0.url == _url } ?? 0
+        self.state = .wait
+        self.updatePlayingInfo()
+        self.download(with: asset)
+        self.downloadImage(with: asset)
+    }
+    fileprivate func downloadImage(with asset: PlayerAsset) {
+        guard asset.cover == nil, let coverUrl = asset.coverUrl else {
+            return
+        }
+        let downLoader = ImageDownloader(name: "PlayerManagerDownloader")
+        downLoader.downloadTimeout = 3
         
+        downLoader.downloadImage(with: URL(string: coverUrl)!, retrieveImageTask: nil, options: nil, progressBlock: nil, completionHandler: {[weak self] (image, _, _, _) in
+            guard let image = image else {
+                return
+            }
+            
+            for  (index, value) in self!.playAssets.enumerated() {
+                if value.url != asset.url {
+                   continue
+                }
+               
+                self?.playAssets[index].cover = image
+                if self?.state == .play || self?.state == .pause {
+                    self?.updatePlayingInfo()
+                }
+            }
+        })
+    }
+    fileprivate func download(with asset: PlayerAsset) {
+        let _url = asset.url!
         
-        
-        
-        self.currentPlayItemIndex =  self.playAssets.index{ $0.url == asset.url} ?? 0
         let exist = DownloadCache.isFileExist(url: URL(fileURLWithPath: _url))
         invokeResultCallBack(.playResourceExist(exist))
+        if !self.isImmediatelyDownload {
+            return
+        }
         
         if self.player == nil {
             self.player = AVPlayer()
         }
-        
-        DownloadManager.default.downloadResource(resourcePath: _url, cacheDirectoryName: "Audio") { [weak self] (downloadReuslt) -> Void in
+        invokeResultCallBack(.prepareToPlay(asset))
+        DownloadManager.default.downloadResource(resourcePath: _url, cacheDirectoryName: self.cachePath) { [weak self] (downloadReuslt) -> Void in
             switch downloadReuslt {
             case.success(let url):
                 let playerItem = AVPlayerItem(url: url)
-                
                 self?.player?.replaceCurrentItem(with: playerItem)
+                self?.invokeResultCallBack(.readyToPlay(asset))
                 self?.addObserver()
-                self?.immediatelyPlay = immediatelyPlay
             case .failure(_):
                 self?.invokeResultCallBack(.failure(PlayerError.getEmptyURLError()))
-                
+                //ERROR DAICHULAI
                 self?.state = .error
             case .failureUrl( _):
                 self?.invokeResultCallBack(.failure(PlayerError.getNetworkLoadFailError()))
                 self?.state = .error
             }
         }
-        
+    }
+    fileprivate func readyToPlay(with assets: [PlayerAsset], willPlayIndex: Int) {
+        self.playAssets = assets
+        var asset: PlayerAsset? = nil
+        if willPlayIndex < assets.count {
+            asset = assets[willPlayIndex]
+        } else {
+            asset = assets.first
+        }
+        self.readyToPlay(with: asset)
     }
     func invokeResultCallBack(_ result: PlayerResult) {
         
@@ -225,9 +295,11 @@ extension PlayManager {
     fileprivate func addObserver() {
         
         //播放完成
-        NotificationCenter.default.addObserver(self, selector: #selector(self.playDidFinish), name: Notification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(self.playbackDidFinish), name: Notification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
         //打断处理
         NotificationCenter.default.addObserver(self, selector: #selector(self.audioSessionInterrupted), name: Notification.Name.AVAudioSessionInterruption, object: nil)
+        //输出端变化
+         NotificationCenter.default.addObserver(self, selector: #selector(routeChange(noti:)), name: Notification.Name.AVAudioSessionRouteChange, object: AVAudioSession.sharedInstance())
         //播放进度
         self.addPeriodicTimeObserver()
         //playerItem
@@ -251,9 +323,8 @@ extension PlayManager {
                 self.state = .unkonw
             case .readyToPlay:
                 self.duration = CMTimeGetSeconds(self.player!.currentItem!.duration)
-                
                 self.state = .readyToPlay
-                if self.immediatelyPlay {
+                if self.isImmediatelyPlay {
                     PlayManager.play()
                 }
             case .failed:
@@ -264,15 +335,14 @@ extension PlayManager {
         }
     }
     @objc
-    fileprivate func playDidFinish() {
+    fileprivate func playbackDidFinish() {
         PlayManager.stop()
         self.state = .finish
-        if self.currentPlayItemIndex == self.playItemList.count - 1 {
-            self.state = .listFinish
-        }
+        self.duration = 0
         if self.autoPlayNextSong {
             PlayManager.next()
         }
+        
     }
     @objc
     fileprivate func audioSessionInterrupted(_ notification: Notification) {
@@ -287,7 +357,7 @@ extension PlayManager {
             PlayManager.pause()
         case .ended:
             let option = userInfo[AVAudioSessionInterruptionOptionKey] as! Int
-            if option == AVAudioSessionInterruptionOptions.shouldResume.rawValue.hashValue{
+            if option == AVAudioSessionInterruptionOptions.shouldResume.rawValue.hashValue {
                 PlayManager.play()
             }
         }
@@ -309,49 +379,89 @@ extension PlayManager {
             }
         }
     }
-}
-// BackPlayerInfo
-extension PlayManager{
-    // 设置后台播放显示信息
-    func updatePlayingInfo() {
-        guard let player = self.player else {
+    @objc func routeChange(noti: Notification) {
+        guard let userInfo = noti.userInfo else {
             return
         }
         
-        let mpic = MPNowPlayingInfoCenter.default()
-        let cover = self.playingAsset?.cover ?? self.defaultCover
-        let postion = CMTimeGetSeconds(player.currentTime())
-        var info :[String:Any] = [MPNowPlayingInfoPropertyElapsedPlaybackTime:postion,
-                    MPMediaItemPropertyPlaybackDuration: self.duration]
+        let changeResonInt = userInfo[AVAudioSessionRouteChangeReasonKey] as! Int
         
-        if let cover = cover{
-            //专辑封面
-            let mySize = CGSize(width: 400, height: 400)
+        let changeReson = AVAudioSessionRouteChangeReason(rawValue: UInt(changeResonInt))
+        
+        if changeReson != .oldDeviceUnavailable {
+            return
+        }
+
+        let routeDes = userInfo[AVAudioSessionRouteChangePreviousRouteKey] as! AVAudioSessionRouteDescription
+        let portDes = routeDes.outputs.first
+
+        if portDes?.portType == AVAudioSessionPortHeadphones {
+            let audioRouteOveeride = kAudioSessionOverrideAudioRoute_Speaker
+            let session = AVAudioSession.sharedInstance()
+            try? session.setPreferredIOBufferDuration(Double(audioRouteOveeride))
             
-            let albumArt = MPMediaItemArtwork(boundsSize:mySize) { sz in
-                return cover
+            if self.state == .play {
+                DispatchQueue.main.async {
+                    PlayManager.pause()
+                }
             }
-            info[MPMediaItemPropertyArtwork] = albumArt
-        }
-        if let title = self.playingAsset?.title{
-            info[MPMediaItemPropertyTitle] = title
-        }
-        if let artist = self.playingAsset?.artist{
-            info[MPMediaItemPropertyArtist] = artist
+
         }
         
-        mpic.nowPlayingInfo = info
+    }
+}
+// BackPlayerInfo
+extension PlayManager {
+    // 设置后台播放显示信息
+    func updatePlayingInfo() {
+        
+        if !self.isBackgroundPlay {
+      
+            return
+        }
+        
+        let playerAsset = self.currentPlayingAsset
+       
+        var postion = 0.0
+        if let player = player {
+            postion = CMTimeGetSeconds(player.currentTime())
+        }
+        
+        var info: [String: Any] = [MPNowPlayingInfoPropertyElapsedPlaybackTime: NSNumber(value: postion),
+                    MPMediaItemPropertyPlaybackDuration: NSNumber(value: self.duration)]
+        
+        info[MPNowPlayingInfoPropertyPlaybackRate] = self.state == .play ? NSNumber(value: 1) : NSNumber(value: 0)
+        let cover = playerAsset?.cover ?? self.defaultCover
+        if let cover = cover {
+            //专辑封面
+            let rect = cover.size.width > cover.size.height ? cover.size.height : cover.size.width
+           let cover = cover.kf.resize(to: CGSize(width: rect, height: rect))
+            var albumArt: MPMediaItemArtwork? = nil
+            if #available(iOS 10.0, *) {
+                let mySize = CGSize(width: 400, height: 400)
+                albumArt = MPMediaItemArtwork(boundsSize: mySize) { _ in cover }
+            } else {
+                
+                albumArt = MPMediaItemArtwork(image: cover)
+                
+            }
+            info[MPMediaItemPropertyArtwork] = albumArt!
+        }
+        if let subname = playerAsset?.subname {
+            info[MPMediaItemPropertyTitle] = subname
+        }
+        if let contentName = playerAsset?.contentName {
+            info[MPMediaItemPropertyArtist] = contentName
+        }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
 
     }
     
-    func backgroundPlayRemoteFuncRegister(){
-       
-       MPRemoteCommandCenter.shared().nextTrackCommand.addTarget { (event) -> MPRemoteCommandHandlerStatus in
-            PlayManager.next()
-            return .success
-        }
+    func backgroundPlayRemoteFuncRegister() {
+      
         MPRemoteCommandCenter.shared().pauseCommand.addTarget { (_) -> MPRemoteCommandHandlerStatus in
             PlayManager.pause()
+            self.updatePlayingInfo()
             return .success
         }
         MPRemoteCommandCenter.shared().playCommand.addTarget { (_) -> MPRemoteCommandHandlerStatus in
@@ -360,6 +470,10 @@ extension PlayManager{
         }
         MPRemoteCommandCenter.shared().previousTrackCommand.addTarget { (_) -> MPRemoteCommandHandlerStatus in
             PlayManager.previousTrack()
+            return .success
+        }
+        MPRemoteCommandCenter.shared().nextTrackCommand.addTarget { (_) -> MPRemoteCommandHandlerStatus in
+            PlayManager.next()
             return .success
         }
     }

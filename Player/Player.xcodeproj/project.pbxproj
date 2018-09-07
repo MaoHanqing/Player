@@ -68,6 +68,15 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		EC0C7CDF212E819D00D57225 /* PlayManager */ = {
+			isa = PBXGroup;
+			children = (
+				EC11607D2105DFBE00315755 /* PlayerManager.swift */,
+				ECEB7CB12122B1E300B7A804 /* PlayerHelper.swift */,
+			);
+			path = PlayManager;
+			sourceTree = "<group>";
+		};
 		EC11605C2105DF9D00315755 = {
 			isa = PBXGroup;
 			children = (
@@ -89,11 +98,9 @@
 		EC1160672105DF9D00315755 /* Player */ = {
 			isa = PBXGroup;
 			children = (
-				EC1162B12106D24100315755 /* String+md5.swift */,
+				EC0C7CDF212E819D00D57225 /* PlayManager */,
 				EC1160852106CDA600315755 /* Helper */,
 				EC11607E2105DFBE00315755 /* MainViewController.swift */,
-				EC11607D2105DFBE00315755 /* PlayerManager.swift */,
-				ECEB7CB12122B1E300B7A804 /* PlayerHelper.swift */,
 				EC1160802105DFBE00315755 /* PlayerRequestLoader.swift */,
 				EC11607F2105DFBE00315755 /* PlayerRequestTask.swift */,
 				EC1160682105DF9D00315755 /* AppDelegate.swift */,
@@ -113,6 +120,7 @@
 				EC1160862106CDA600315755 /* DownloadHelper.swift */,
 				EC1160872106CDA600315755 /* DownloadCache.swift */,
 				EC1160882106CDA600315755 /* DownloadManager.swift */,
+				EC1162B12106D24100315755 /* String+md5.swift */,
 			);
 			path = Helper;
 			sourceTree = "<group>";
@@ -209,11 +217,13 @@
 			inputPaths = (
 				"${SRCROOT}/Pods/Target Support Files/Pods-Player/Pods-Player-frameworks.sh",
 				"${BUILT_PRODUCTS_DIR}/Alamofire/Alamofire.framework",
+				"${BUILT_PRODUCTS_DIR}/Kingfisher/Kingfisher.framework",
 				"${BUILT_PRODUCTS_DIR}/SVProgressHUD/SVProgressHUD.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Alamofire.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Kingfisher.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SVProgressHUD.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;

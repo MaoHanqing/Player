@@ -15,6 +15,9 @@ public enum PlayerResult {
     case playing(Double, Double)
     case playerStateChange(PlayerState)
     case playItemIndex(Int)
+    case prepareToPlay(PlayerAsset)
+    case readyToPlay(PlayerAsset)
+    
 }
 
 public enum PlayerState {
@@ -27,23 +30,29 @@ public enum PlayerState {
     case replay
     case finish
     case buffering
-    case listFinish
     case readyToPlay
-   
+    case topOfPlayList
+    case trailOfPlayList
 }
 public struct PlayerAsset {
-    let url :String?
-    let title:String?
-    let cover:UIImage?
-    let artist:String?
-    public init(url:String?,title:String? = nil,artist:String? =  nil,cover:UIImage? = nil) {
+    let url: String?
+    let name: String?
+    let subname: String?
+    let contentName: String?
+    var cover: UIImage?
+    let coverUrl: String?
+    let albumID: String?
+    
+    public init(url: String?, name: String? = nil, subname: String? =  nil, contentName: String? = nil, cover: UIImage? = nil, coverUrl: String? = nil, albumID: String? = nil) {
         self.url = url
         self.cover = cover
-        self.artist = artist
-        self.title = title
+        self.coverUrl = coverUrl
+        self.name = name
+        self.subname = subname
+        self.contentName = contentName
+        self.albumID = albumID
     }
 }
-
 
 struct PlayerError {
     enum PlayerErrorCode: Int {
