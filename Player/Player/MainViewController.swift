@@ -27,10 +27,9 @@ class MainViewController: UIViewController {
         SVProgressHUD.show()
         PlayManager.default.cyclePlay = true
         PlayManager.default.isBackgroundPlay = true
-        PlayManager.default.defaultCover = #imageLiteral(resourceName: "pic_popup_freetrail copy")
-//        http://sc1.111ttt.cn:8282/2017/1/11m/11/304112002347.m4a?#.mp3
+
         let urls = [
-            PlayerAsset(url: "http://sc1.111ttt.cn:8282/2017/1/11m/11/3041120023", name: "追光者", subname: "岑宁儿"),
+            PlayerAsset(url: "http://sc1.111ttt.cn:8282/2017/1/11m/11/304112002347.m4a?#.mp3", name: "追光者", subname: "岑宁儿"),
             PlayerAsset(url: "http://sc1.111ttt.cn/2016/1/06/01/199012102390.mp3", name: "小楼一夜听春雨", subname: "任然"),
             PlayerAsset(url: "http://sc1.111ttt.cn:8282/2017/1/05m/09/298092040183.m4a?#.mp3", name: "凉城", subname: "任然"),
             PlayerAsset(url: "http://sc1.111ttt.cn:8282/2018/1/03m/13/396131202421.m4a?#.mp3", name: "佛系少女", subname: "冯提莫")]

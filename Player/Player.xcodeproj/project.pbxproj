@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		1685A7D31BA60DA18325AA9F /* Pods_Player.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B718F16C58AF1833B1B0805A /* Pods_Player.framework */; };
+		EC093D5B218FDE11009AFF99 /* External.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC093D5A218FDE11009AFF99 /* External.swift */; };
 		EC1160692105DF9D00315755 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC1160682105DF9D00315755 /* AppDelegate.swift */; };
 		EC11606B2105DF9D00315755 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC11606A2105DF9D00315755 /* ViewController.swift */; };
 		EC11606E2105DF9D00315755 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = EC11606C2105DF9D00315755 /* Main.storyboard */; };
@@ -29,6 +30,7 @@
 		4CA682FC67E8F374564F8D3D /* Pods-Player.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Player.release.xcconfig"; path = "Pods/Target Support Files/Pods-Player/Pods-Player.release.xcconfig"; sourceTree = "<group>"; };
 		7B816C49D2D268951E2FA5FD /* Pods-Player.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Player.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Player/Pods-Player.debug.xcconfig"; sourceTree = "<group>"; };
 		B718F16C58AF1833B1B0805A /* Pods_Player.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Player.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC093D5A218FDE11009AFF99 /* External.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = External.swift; sourceTree = "<group>"; };
 		EC1160652105DF9D00315755 /* Player.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Player.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC1160682105DF9D00315755 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		EC11606A2105DF9D00315755 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 				EC1160742105DF9D00315755 /* LaunchScreen.storyboard */,
 				EC1160772105DF9D00315755 /* Info.plist */,
 				EC11606F2105DF9D00315755 /* Player.xcdatamodeld */,
+				EC093D5A218FDE11009AFF99 /* External.swift */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -265,6 +268,7 @@
 				EC1160812105DFBE00315755 /* PlayerManager.swift in Sources */,
 				EC1160712105DF9D00315755 /* Player.xcdatamodeld in Sources */,
 				EC1160822105DFBE00315755 /* MainViewController.swift in Sources */,
+				EC093D5B218FDE11009AFF99 /* External.swift in Sources */,
 				EC1160832105DFBE00315755 /* PlayerRequestTask.swift in Sources */,
 				ECEB7CB22122B1E300B7A804 /* PlayerHelper.swift in Sources */,
 				EC1160892106CDA600315755 /* DownloadHelper.swift in Sources */,
