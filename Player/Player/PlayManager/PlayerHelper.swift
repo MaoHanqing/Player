@@ -11,13 +11,13 @@ import UIKit
 
 public enum PlayerResult {
     case playResourceExist(Bool)
-    case failure(Error)
+    case failure(PlayerError)
     case playing(Double, Double)
     case playerStateChange(PlayerState)
     case playItemIndex(Int)
     case prepareToPlay(PlayerAsset)
     case readyToPlay(PlayerAsset)
-    
+
 }
 
 public enum PlayerState {
@@ -34,6 +34,7 @@ public enum PlayerState {
     case topOfPlayList
     case trailOfPlayList
 }
+
 public struct PlayerAsset {
     let url: String?
     let name: String?
@@ -42,8 +43,9 @@ public struct PlayerAsset {
     var cover: UIImage?
     let coverUrl: String?
     let albumID: String?
-    
-    public init(url: String?, name: String? = nil, subname: String? =  nil, contentName: String? = nil, cover: UIImage? = nil, coverUrl: String? = nil, albumID: String? = nil) {
+    let lyricUrl: String?
+
+    public init(url: String?, name: String? = nil, subname: String? =  nil, contentName: String? = nil, cover: UIImage? = nil, coverUrl: String? = nil, albumID: String? = nil, lyricUrl: String? = nil) {
         self.url = url
         self.cover = cover
         self.coverUrl = coverUrl
@@ -51,24 +53,13 @@ public struct PlayerAsset {
         self.subname = subname
         self.contentName = contentName
         self.albumID = albumID
+        self.lyricUrl = lyricUrl
     }
 }
 
-struct PlayerError {
-    enum PlayerErrorCode: Int {
-        case loadingFail = 400
-        case emptyURL = 401
-    }
-    static let PlayerErrorDomain = "playerDomain"
-    static func getNetworkLoadFailError() -> Error {
-        return self.setError(info: "loading fail,server error", errorCode: PlayerErrorCode.loadingFail)
-    }
-    static func getEmptyURLError() -> Error {
-        return self.setError(info: "url is empty", errorCode: PlayerErrorCode.emptyURL)
-    }
-    static func setError(info: String, errorCode: PlayerErrorCode) -> Error {
-        let errorInfo = ["errMsg": info]
-        let error = NSError(domain: PlayerErrorDomain, code: errorCode.rawValue, userInfo: errorInfo)
-        return error as Error
-    }
+public enum PlayerError: Error {
+    case emptyURL
+    case loadingFail
+    case downloadCancel
+    case downloadFail
 }
